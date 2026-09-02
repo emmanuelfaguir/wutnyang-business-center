@@ -1,0 +1,5 @@
+# Never commit private deployment configuration.
+.env
+.env.*
+!.env.example
+node_modules/
