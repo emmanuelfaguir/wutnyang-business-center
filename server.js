@@ -2,7 +2,7 @@ const express=require('express');
 const app=express();
 app.use(express.json());
 app.use(express.static('public'));
-const URL=(process.env.SUPABASE_URL||'').replace(/\\/$/,'');
+const URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const KEY=process.env.SUPABASE_KEY||'';
 async function supa(path,options={}){
   const r=await fetch(URL+path,{...options,headers:{
