@@ -1,0 +1,67 @@
+<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WUTNYANG BUSINESS CENTER</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17212b}
+header{background:#17324d;color:#fff;padding:18px}main{max-width:1000px;margin:auto;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card,.box{background:#fff;padding:16px;border-radius:12px;margin:12px 0;box-shadow:0 1px 5px #0001}
+.card b{font-size:22px}input,select,button{padding:11px;border-radius:8px;border:1px solid #ccd4db;margin:4px}
+button{background:#17324d;color:#fff;border:0;font-weight:bold}.tabs{display:flex;gap:6px;overflow:auto}
+table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #ddd;text-align:left}
+.green{color:#14864b}.red{color:#b52e2e}.hidden{display:none}
+@media(max-width:650px){.grid{grid-template-columns:repeat(2,1fr)}}
+</style></head>
+<body><header><h2>WUTNYANG BUSINESS CENTER</h2><span>Online income & expense system</span></header>
+<main>
+<div class="tabs">
+<button onclick="show('dash')">Dashboard</button><button onclick="show('income')">＋ Income</button>
+<button onclick="show('expense')">− Expense</button><button onclick="show('tx')">Transactions</button>
+</div>
+<div id="dash"><div class="grid">
+<div class="card">Income<br><b id="i" class="green">0.00</b></div>
+<div class="card">Expenses<br><b id="e" class="red">0.00</b></div>
+<div class="card">Profit<br><b id="p">0.00</b></div>
+<div class="card">Records<br><b id="n">0</b></div></div></div>
+
+<div id="income" class="box hidden"><h3>Record Income</h3>
+<form onsubmit="add(event,'Income')">
+<input name="date" type="date" required><input name="amount" type="number" step=".01" min="0.01" placeholder="Amount" required>
+<select name="category"><option>Football</option><option>Gaming / PlayStation</option><option>Pool / Billiards</option><option>Cinema</option><option>Coffee / Food</option><option>Mobile Money</option><option>Other</option></select>
+<input name="staff" placeholder="Staff name" required><input name="description" placeholder="Description">
+<button>Save Income</button></form></div>
+
+<div id="expense" class="box hidden"><h3>Record Expense</h3>
+<form onsubmit="add(event,'Expense')">
+<input name="date" type="date" required><input name="amount" type="number" step=".01" min="0.01" placeholder="Amount" required>
+<select name="category"><option>Supplies</option><option>Rent</option><option>Electricity</option><option>Water</option><option>Staff</option><option>Maintenance</option><option>Food / Drinks</option><option>Mobile Money</option><option>Other</option></select>
+<input name="staff" placeholder="Staff name" required><input name="description" placeholder="Description">
+<button>Save Expense</button></form></div>
+
+<div id="tx" class="box hidden"><h3>All Transactions</h3>
+<table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Staff</th><th>Amount</th><th>Description</th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+</main>
+<script>
+let data=[];
+const today=()=>new Date().toISOString().slice(0,10);
+function show(id){['dash','income','expense','tx'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id));if(id==='tx')render();}
+async function load(){
+ const r=await fetch('/api/transactions'); const x=await r.json();
+ if(!r.ok){alert('Database connection error: '+(x.error||''));return}
+ data=x; const i=data.filter(a=>a.type==='Income').reduce((s,a)=>s+Number(a.amount),0);
+ const e=data.filter(a=>a.type==='Expense').reduce((s,a)=>s+Number(a.amount),0);
+ document.getElementById('i').textContent=i.toFixed(2);
+ document.getElementById('e').textContent=e.toFixed(2);
+ document.getElementById('p').textContent=(i-e).toFixed(2);
+ document.getElementById('n').textContent=data.length; render();
+}
+function render(){document.getElementById('rows').innerHTML=data.map(x=>'<tr><td>'+x.date+'</td><td>'+x.type+'</td><td>'+x.category+'</td><td>'+x.staff+'</td><td>'+Number(x.amount).toFixed(2)+'</td><td>'+((x.description)||'')+'</td></tr>').join('')}
+async function add(ev,type){
+ ev.preventDefault(); const f=new FormData(ev.target);
+ const r=await fetch('/api/transactions',{method:'POST',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({date:f.get('date'),amount:Number(f.get('amount')),type,category:f.get('category'),staff:f.get('staff'),description:f.get('description')})});
+ if(!r.ok){const x=await r.json();alert('Could not save: '+(x.error||''));return}
+ ev.target.reset();ev.target.querySelector('[name=date]').value=today();await load();show('tx');
+}
+document.querySelectorAll('[name=date]').forEach(x=>x.value=today());load();
+</script></body></html>
