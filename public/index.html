@@ -1,67 +1,165 @@
 <!doctype html>
-<html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WUTNYANG BUSINESS CENTER</title>
 <style>
-body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#17212b}
-header{background:#17324d;color:#fff;padding:18px}main{max-width:1000px;margin:auto;padding:16px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card,.box{background:#fff;padding:16px;border-radius:12px;margin:12px 0;box-shadow:0 1px 5px #0001}
-.card b{font-size:22px}input,select,button{padding:11px;border-radius:8px;border:1px solid #ccd4db;margin:4px}
-button{background:#17324d;color:#fff;border:0;font-weight:bold}.tabs{display:flex;gap:6px;overflow:auto}
-table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #ddd;text-align:left}
-.green{color:#14864b}.red{color:#b52e2e}.hidden{display:none}
-@media(max-width:650px){.grid{grid-template-columns:repeat(2,1fr)}}
-</style></head>
-<body><header><h2>WUTNYANG BUSINESS CENTER</h2><span>Online income & expense system</span></header>
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#1f2937}
+header{background:#111827;color:#fff;padding:22px;text-align:center}
+main{max-width:1100px;margin:20px auto;padding:0 16px}
+.panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
+input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}button{background:#111827;color:white;cursor:pointer}
+.hidden{display:none}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}
+.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}
+@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}}
+</style>
+</head>
+<body>
+<header><h1>WUTNYANG BUSINESS CENTER</h1><p>Business Income & Expense Manager</p></header>
+
 <main>
-<div class="tabs">
-<button onclick="show('dash')">Dashboard</button><button onclick="show('income')">＋ Income</button>
-<button onclick="show('expense')">− Expense</button><button onclick="show('tx')">Transactions</button>
+<section id="loginPanel" class="panel">
+<h2>Secure Login</h2>
+<p>Sign in with your WUTNYANG BUSINESS CENTER account.</p>
+<input id="email" type="email" placeholder="Email address" autocomplete="username">
+<input id="password" type="password" placeholder="Password" autocomplete="current-password">
+<br><button id="loginBtn">Login</button>
+<div id="loginMsg"></div>
+<div class="notice">Version 2 login is being introduced before the old public database policy is removed. Your existing records are not deleted.</div>
+</section>
+
+<section id="app" class="hidden">
+<div class="panel userbar">
+<div>Signed in as <b id="userEmail"></b> <span id="roleBadge" class="badge">Checking role…</span></div>
+<button id="logoutBtn">Logout</button>
 </div>
-<div id="dash"><div class="grid">
-<div class="card">Income<br><b id="i" class="green">0.00</b></div>
-<div class="card">Expenses<br><b id="e" class="red">0.00</b></div>
-<div class="card">Profit<br><b id="p">0.00</b></div>
-<div class="card">Records<br><b id="n">0</b></div></div></div>
 
-<div id="income" class="box hidden"><h3>Record Income</h3>
-<form onsubmit="add(event,'Income')">
-<input name="date" type="date" required><input name="amount" type="number" step=".01" min="0.01" placeholder="Amount" required>
-<select name="category"><option>Football</option><option>Gaming / PlayStation</option><option>Pool / Billiards</option><option>Cinema</option><option>Coffee / Food</option><option>Mobile Money</option><option>Other</option></select>
-<input name="staff" placeholder="Staff name" required><input name="description" placeholder="Description">
-<button>Save Income</button></form></div>
+<section class="cards">
+<div class="card">Income<b id="income">0.00</b></div>
+<div class="card">Expenses<b id="expense">0.00</b></div>
+<div class="card">Balance<b id="balance">0.00</b></div>
+<div class="card">Records<b id="count">0</b></div>
+</section>
 
-<div id="expense" class="box hidden"><h3>Record Expense</h3>
-<form onsubmit="add(event,'Expense')">
-<input name="date" type="date" required><input name="amount" type="number" step=".01" min="0.01" placeholder="Amount" required>
-<select name="category"><option>Supplies</option><option>Rent</option><option>Electricity</option><option>Water</option><option>Staff</option><option>Maintenance</option><option>Food / Drinks</option><option>Mobile Money</option><option>Other</option></select>
-<input name="staff" placeholder="Staff name" required><input name="description" placeholder="Description">
-<button>Save Expense</button></form></div>
+<form id="form" class="panel">
+<h2>Record Transaction</h2>
+<select id="type"><option>Income</option><option>Expense</option></select>
+<input id="amount" type="number" step="0.01" min="0" placeholder="Amount" required>
+<select id="category">
+<option>Football</option><option>Gaming / PlayStation</option><option>Pool / Billiards</option>
+<option>Cinema</option><option>Coffee / Food</option><option>Mobile Money</option>
+<option>Supplies</option><option>Rent</option><option>Electricity</option>
+<option>Water</option><option>Staff</option><option>Maintenance</option><option>Other</option>
+</select>
+<input id="staff" placeholder="Staff name">
+<input id="description" placeholder="Description">
+<button type="submit">Save Transaction</button>
+</form>
 
-<div id="tx" class="box hidden"><h3>All Transactions</h3>
-<table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Staff</th><th>Amount</th><th>Description</th></tr></thead>
-<tbody id="rows"></tbody></table></div>
+<div class="panel">
+<h2>Transactions</h2>
+<table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th></tr></thead>
+<tbody id="rows"></tbody></table>
+</div>
+</section>
 </main>
+
 <script>
-let data=[];
-const today=()=>new Date().toISOString().slice(0,10);
-function show(id){['dash','income','expense','tx'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id));if(id==='tx')render();}
-async function load(){
- const r=await fetch('/api/transactions'); const x=await r.json();
- if(!r.ok){alert('Database connection error: '+(x.error||''));return}
- data=x; const i=data.filter(a=>a.type==='Income').reduce((s,a)=>s+Number(a.amount),0);
- const e=data.filter(a=>a.type==='Expense').reduce((s,a)=>s+Number(a.amount),0);
- document.getElementById('i').textContent=i.toFixed(2);
- document.getElementById('e').textContent=e.toFixed(2);
- document.getElementById('p').textContent=(i-e).toFixed(2);
- document.getElementById('n').textContent=data.length; render();
+const SUPABASE_URL = 'https://eoyaunzknoowjldilbdp.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_gNfIHTXeljHstcERpUCxxQ_hDCEfKel';
+let session = null;
+let transactions = [];
+
+const $ = id => document.getElementById(id);
+function msg(text, ok=false){ $('loginMsg').textContent=text; $('loginMsg').style.color=ok?'green':'crimson'; }
+
+function render(){
+ let inc=0, exp=0;
+ transactions.forEach(t => t.type === 'Income' ? inc += Number(t.amount) : exp += Number(t.amount));
+ $('income').textContent=inc.toFixed(2);
+ $('expense').textContent=exp.toFixed(2);
+ $('balance').textContent=(inc-exp).toFixed(2);
+ $('count').textContent=transactions.length;
+ $('rows').innerHTML=transactions.map(t =>
+ `<tr><td>${t.date||''}</td><td>${t.type||''}</td><td>${Number(t.amount||0).toFixed(2)}</td><td>${t.category||''}</td><td>${t.staff||''}</td><td>${t.description||''}</td></tr>`
+ ).join('');
 }
-function render(){document.getElementById('rows').innerHTML=data.map(x=>'<tr><td>'+x.date+'</td><td>'+x.type+'</td><td>'+x.category+'</td><td>'+x.staff+'</td><td>'+Number(x.amount).toFixed(2)+'</td><td>'+((x.description)||'')+'</td></tr>').join('')}
-async function add(ev,type){
- ev.preventDefault(); const f=new FormData(ev.target);
- const r=await fetch('/api/transactions',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({date:f.get('date'),amount:Number(f.get('amount')),type,category:f.get('category'),staff:f.get('staff'),description:f.get('description')})});
- if(!r.ok){const x=await r.json();alert('Could not save: '+(x.error||''));return}
- ev.target.reset();ev.target.querySelector('[name=date]').value=today();await load();show('tx');
+
+async function supa(path, options={}){
+ const headers = Object.assign({
+   apikey: SUPABASE_PUBLISHABLE_KEY,
+   'Content-Type':'application/json'
+ }, options.headers||{});
+ if(session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+ else headers.Authorization = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+ const r=await fetch(SUPABASE_URL+path,{...options,headers});
+ const text=await r.text();
+ let data; try{data=JSON.parse(text)}catch{data=text}
+ if(!r.ok) throw new Error(data?.message||data?.error_description||data?.error||text||('HTTP '+r.status));
+ return data;
 }
-document.querySelectorAll('[name=date]').forEach(x=>x.value=today());load();
-</script></body></html>
+
+async function loadProfile(){
+ const rows=await supa('/rest/v1/profiles?select=full_name,role&id=eq.'+encodeURIComponent(session.user.id));
+ if(rows.length) {
+   $('roleBadge').textContent=rows[0].role.toUpperCase();
+   $('staff').value = rows[0].full_name || '';
+ } else $('roleBadge').textContent='USER';
+}
+
+async function loadTransactions(){
+ transactions=await supa('/rest/v1/transactions?select=*&order=date.desc,created_at.desc');
+ render();
+}
+
+async function login(){
+ try{
+   msg('Signing in…',true);
+   const data=await supa('/auth/v1/token?grant_type=password',{
+     method:'POST',
+     body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})
+   });
+   session=data;
+   $('loginPanel').classList.add('hidden'); $('app').classList.remove('hidden');
+   $('userEmail').textContent=session.user.email||'';
+   await loadProfile();
+   await loadTransactions();
+ }catch(e){ msg(e.message); }
+}
+
+$('loginBtn').onclick=login;
+$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+
+$('logoutBtn').onclick=()=>{
+ session=null; transactions=[];
+ $('app').classList.add('hidden'); $('loginPanel').classList.remove('hidden');
+ $('password').value=''; $('loginMsg').textContent='';
+};
+
+$('form').addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(!session) return msg('Please log in first.');
+ try{
+   const body={
+     date:new Date().toISOString().slice(0,10),
+     type:$('type').value,
+     amount:Number($('amount').value),
+     category:$('category').value,
+     staff:$('staff').value,
+     description:$('description').value,
+     user_id:session.user.id
+   };
+   await supa('/rest/v1/transactions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(body)});
+   e.target.reset();
+   $('staff').value='';
+   await loadTransactions();
+   alert('Transaction saved.');
+ }catch(e){ alert('Could not save transaction: '+e.message); }
+});
+</script>
+</body>
+</html>
