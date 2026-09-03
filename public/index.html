@@ -5,17 +5,188 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WUTNYANG BUSINESS CENTER</title>
 <style>
-*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:#ffffff;color:#1f2937}
-header{background:#111827;color:#fff;padding:22px;text-align:center}
-main{max-width:1100px;margin:20px auto;padding:0 16px}
-.panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
-input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}button{background:#111827;color:white;cursor:pointer}
-.hidden{display:none}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
-table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}
-.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}
-.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}
-@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}}
+*{box-sizing:border-box}
+
+body{
+  font-family:Arial,sans-serif;
+  margin:0;
+  background:#ffffff;
+  color:#172033;
+}
+
+header{
+  background:#0b0b0b;
+  color:#ffffff;
+  padding:24px 20px 22px;
+  text-align:center;
+  border-radius:0 0 14px 14px;
+  box-shadow:0 3px 12px #0003;
+}
+
+header h1{
+  margin:0;
+  font-size:34px;
+  font-weight:800;
+  letter-spacing:.5px;
+}
+
+header img{
+  width:150px;
+  max-width:70%;
+  margin:12px auto;
+  display:block;
+}
+
+header p{
+  margin:4px 0 0;
+  font-size:18px;
+}
+
+main{
+  max-width:1200px;
+  margin:24px auto;
+  padding:0 18px;
+}
+
+.panel{
+  background:#ffffff;
+  border-radius:14px;
+  padding:22px;
+  margin:18px 0;
+  box-shadow:0 2px 12px #00000012;
+  border:1px solid #edf0f4;
+}
+
+.userbar{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+}
+
+.card{
+  background:#ffffff;
+  border-radius:14px;
+  padding:22px;
+  box-shadow:0 2px 12px #00000012;
+  border:1px solid #edf0f4;
+}
+
+.card b{
+  display:block;
+  font-size:27px;
+  margin-top:9px;
+  color:#172033;
+}
+
+input,select,button{
+  padding:12px 14px;
+  margin:5px 4px;
+  border:1px solid #d7dce4;
+  border-radius:9px;
+  font-size:15px;
+}
+
+input,select{
+  background:#ffffff;
+  color:#172033;
+}
+
+button{
+  background:#111827;
+  color:#ffffff;
+  cursor:pointer;
+  font-weight:600;
+}
+
+button:hover{
+  opacity:.92;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:#ffffff;
+}
+
+th,td{
+  padding:13px 10px;
+  border-bottom:1px solid #e5e9ef;
+  text-align:left;
+}
+
+th{
+  background:#f5f7fa;
+  font-weight:700;
+}
+
+.badge{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#eef1f5;
+  font-size:12px;
+  font-weight:600;
+}
+
+.notice{
+  padding:12px;
+  border-radius:9px;
+  background:#fff7ed;
+  margin-top:12px;
+}
+
+.hidden{
+  display:none;
+}
+
+@media(max-width:900px){
+  .cards{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
+@media(max-width:600px){
+  header h1{
+    font-size:25px;
+  }
+
+  header p{
+    font-size:15px;
+  }
+
+  main{
+    padding:0 10px;
+  }
+
+  .cards{
+    grid-template-columns:1fr;
+  }
+
+  .panel{
+    padding:16px;
+  }
+
+  input,select,button{
+    width:100%;
+    margin:5px 0;
+  }
+
+  table{
+    font-size:12px;
+  }
+
+  th,td{
+    padding:9px 6px;
+  }
+}
 </style>
 </head>
 <body>
