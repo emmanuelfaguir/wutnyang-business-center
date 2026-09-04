@@ -6,23 +6,17 @@
 <title>WUTNYANG BUSINESS CENTER</title>
 <style>
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#1f2937}
-header{background:#111827;color:#fff;padding:22px;text-align:center}
-main{max-width:1100px;margin:20px auto;padding:0 16px}
-.panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
-input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}button{background:#111827;color:white;cursor:pointer}
-.hidden{display:none}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
-table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}
-.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}
-.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}
-@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}}
+header{background:#111827;color:#fff;padding:22px;text-align:center}main{max-width:1100px;margin:20px auto;padding:0 16px}
+.panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
+input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}
+.hidden{display:none}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}.form-message{margin-top:8px;min-height:18px}
+@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}.table-wrap{overflow-x:auto}}
 </style>
 </head>
 <body>
 <header>
 <h1>WUTNYANG BUSINESS CENTER</h1>
 <p>Business Income & Expense Manager</p>
-</header>
 </header>
 
 <main>
@@ -62,12 +56,39 @@ table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;bor
 <input id="staff" placeholder="Staff name">
 <input id="description" placeholder="Description">
 <button type="submit">Save Transaction</button>
+<div id="transactionMsg" class="form-message"></div>
+</form>
+
+<form id="editPanel" class="panel hidden">
+<h2>Edit Transaction</h2>
+<select id="editType"><option>Income</option><option>Expense</option></select>
+<input id="editAmount" type="number" step="0.01" min="0" placeholder="Amount" required>
+<select id="editCategory">
+<option>Football</option><option>Gaming / PlayStation</option><option>Pool / Billiards</option>
+<option>Cinema</option><option>Coffee / Food</option><option>Mobile Money</option>
+<option>Supplies</option><option>Rent</option><option>Electricity</option>
+<option>Water</option><option>Staff</option><option>Maintenance</option><option>Other</option>
+</select>
+<input id="editStaff" placeholder="Staff name">
+<input id="editDescription" placeholder="Description">
+<button type="submit">Save Changes</button><button type="button" id="cancelEditBtn" class="secondary">Cancel</button>
+<div id="editMsg" class="form-message"></div>
+</form>
+
+<form id="staffPanel" class="panel hidden">
+<h2>Add Staff User</h2>
+<p>Each staff member receives a separate login and can only see today’s transactions.</p>
+<input id="staffFullName" placeholder="Full name" required>
+<input id="staffEmail" type="email" placeholder="Email address" required autocomplete="off">
+<input id="staffPassword" type="password" placeholder="Temporary password (8+ characters)" required autocomplete="new-password">
+<button type="submit">Create Staff Login</button>
+<div id="staffMsg" class="form-message"></div>
 </form>
 
 <div class="panel">
 <h2>Transactions</h2>
-<table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th></tr></thead>
-<tbody id="rows"></tbody></table>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th><th id="actionsHeader" class="hidden">Actions</th></tr></thead>
+<tbody id="rows"></tbody></table></div>
 </div>
 </section>
 </main>
@@ -75,94 +96,89 @@ table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;bor
 <script>
 const SUPABASE_URL = 'https://eoyaunzknoowjldilbdp.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_gNfIHTXeljHstcERpUCxxQ_hDCEfKel';
-let session = null;
-let transactions = [];
-
+let session = null, transactions = [], currentRole = '', profileName = '', editingId = null;
 const $ = id => document.getElementById(id);
-function msg(text, ok=false){ $('loginMsg').textContent=text; $('loginMsg').style.color=ok?'green':'crimson'; }
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function setMessage(id, text, ok=false){ $(id).textContent=text; $(id).style.color=ok?'green':'crimson'; }
+function isAdmin(){ return currentRole === 'admin'; }
 
 function render(){
  let inc=0, exp=0;
  transactions.forEach(t => t.type === 'Income' ? inc += Number(t.amount) : exp += Number(t.amount));
- $('income').textContent=inc.toFixed(2);
- $('expense').textContent=exp.toFixed(2);
- $('balance').textContent=(inc-exp).toFixed(2);
- $('count').textContent=transactions.length;
- $('rows').innerHTML=transactions.map(t =>
- `<tr><td>${t.date||''}</td><td>${t.type||''}</td><td>${Number(t.amount||0).toFixed(2)}</td><td>${t.category||''}</td><td>${t.staff||''}</td><td>${t.description||''}</td></tr>`
- ).join('');
+ $('income').textContent=inc.toFixed(2); $('expense').textContent=exp.toFixed(2);
+ $('balance').textContent=(inc-exp).toFixed(2); $('count').textContent=transactions.length;
+ $('actionsHeader').classList.toggle('hidden', !isAdmin());
+ $('rows').innerHTML=transactions.map(t => {
+   const actions = isAdmin() ? `<td><button class="small secondary" data-action="edit" data-id="${escapeHtml(t.id)}">Edit</button><button class="small danger" data-action="delete" data-id="${escapeHtml(t.id)}">Delete</button></td>` : '';
+   return `<tr><td>${escapeHtml(t.date)}</td><td>${escapeHtml(t.type)}</td><td>${Number(t.amount||0).toFixed(2)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.staff)}</td><td>${escapeHtml(t.description)}</td>${actions}</tr>`;
+ }).join('');
 }
 
 async function supa(path, options={}){
- const headers = Object.assign({
-   apikey: SUPABASE_PUBLISHABLE_KEY,
-   'Content-Type':'application/json'
- }, options.headers||{});
- if(session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
- else headers.Authorization = `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+ const headers=Object.assign({apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},options.headers||{});
+ headers.Authorization=`Bearer ${session?.access_token || SUPABASE_PUBLISHABLE_KEY}`;
  const r=await fetch(SUPABASE_URL+path,{...options,headers});
- const text=await r.text();
- let data; try{data=JSON.parse(text)}catch{data=text}
+ const text=await r.text(); let data; try{data=JSON.parse(text)}catch{data=text}
  if(!r.ok) throw new Error(data?.message||data?.error_description||data?.error||text||('HTTP '+r.status));
  return data;
 }
 
 async function loadProfile(){
  const rows=await supa('/rest/v1/profiles?select=full_name,role&id=eq.'+encodeURIComponent(session.user.id));
- if(rows.length) {
-   $('roleBadge').textContent=rows[0].role.toUpperCase();
-   $('staff').value = rows[0].full_name || '';
- } else $('roleBadge').textContent='USER';
+ currentRole=String(rows[0]?.role || '').toLowerCase();
+ profileName=rows[0]?.full_name || '';
+ $('roleBadge').textContent=currentRole ? currentRole.toUpperCase() : 'USER';
+ $('staff').value=profileName;
+ $('staffPanel').classList.toggle('hidden', !isAdmin());
 }
-
-async function loadTransactions(){
- transactions=await supa('/rest/v1/transactions?select=*&order=date.desc,created_at.desc');
- render();
-}
+async function loadTransactions(){ transactions=await supa('/rest/v1/transactions?select=*&order=date.desc,created_at.desc'); render(); }
 
 async function login(){
  try{
-   msg('Signing in…',true);
-   const data=await supa('/auth/v1/token?grant_type=password',{
-     method:'POST',
-     body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})
-   });
-   session=data;
-   $('loginPanel').classList.add('hidden'); $('app').classList.remove('hidden');
-   $('userEmail').textContent=session.user.email||'';
-   await loadProfile();
-   await loadTransactions();
- }catch(e){ msg(e.message); }
+   setMessage('loginMsg','Signing in…',true);
+   session=await supa('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})});
+   $('loginPanel').classList.add('hidden'); $('app').classList.remove('hidden'); $('userEmail').textContent=session.user.email||'';
+   await loadProfile(); await loadTransactions(); setMessage('loginMsg','');
+ }catch(e){setMessage('loginMsg',e.message)}
 }
-
 $('loginBtn').onclick=login;
-$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
-
-$('logoutBtn').onclick=()=>{
- session=null; transactions=[];
- $('app').classList.add('hidden'); $('loginPanel').classList.remove('hidden');
- $('password').value=''; $('loginMsg').textContent='';
-};
+$('password').addEventListener('keydown',e=>{if(e.key==='Enter') login()});
+$('logoutBtn').onclick=()=>{session=null;transactions=[];currentRole='';profileName='';editingId=null;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';setMessage('loginMsg','');};
 
 $('form').addEventListener('submit',async e=>{
- e.preventDefault();
- if(!session) return msg('Please log in first.');
+ e.preventDefault(); if(!session) return;
  try{
-   const body={
-     date:new Date().toISOString().slice(0,10),
-     type:$('type').value,
-     amount:Number($('amount').value),
-     category:$('category').value,
-     staff:$('staff').value,
-     description:$('description').value,
-     user_id:session.user.id
-   };
-   await supa('/rest/v1/transactions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(body)});
-   e.target.reset();
-   $('staff').value='';
-   await loadTransactions();
-   alert('Transaction saved.');
- }catch(e){ alert('Could not save transaction: '+e.message); }
+   await supa('/rest/v1/transactions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({date:new Date().toISOString().slice(0,10),type:$('type').value,amount:Number($('amount').value),category:$('category').value,staff:$('staff').value,description:$('description').value,user_id:session.user.id})});
+   e.target.reset(); $('staff').value=profileName; setMessage('transactionMsg','Transaction saved.',true); await loadTransactions();
+ }catch(e){setMessage('transactionMsg','Could not save transaction: '+e.message)}
+});
+
+$('rows').addEventListener('click',async e=>{
+ const button=e.target.closest('button[data-action]'); if(!button || !isAdmin()) return;
+ const transaction=transactions.find(t=>String(t.id)===button.dataset.id); if(!transaction) return;
+ if(button.dataset.action==='edit'){
+   editingId=transaction.id; $('editType').value=transaction.type||'Income'; $('editAmount').value=transaction.amount||''; $('editCategory').value=transaction.category||'Other'; $('editStaff').value=transaction.staff||''; $('editDescription').value=transaction.description||'';
+   setMessage('editMsg',''); $('editPanel').classList.remove('hidden'); $('editPanel').scrollIntoView({behavior:'smooth'});
+ } else if(confirm('Delete this transaction? This cannot be undone.')){
+   try{await supa('/rest/v1/transactions?id=eq.'+encodeURIComponent(transaction.id),{method:'DELETE'});setMessage('transactionMsg','Transaction deleted.',true);await loadTransactions()}catch(error){setMessage('transactionMsg','Could not delete transaction: '+error.message)}
+ }
+});
+$('cancelEditBtn').onclick=()=>{$('editPanel').classList.add('hidden');editingId=null};
+$('editPanel').addEventListener('submit',async e=>{
+ e.preventDefault(); if(!isAdmin() || !editingId) return;
+ try{
+   await supa('/rest/v1/transactions?id=eq.'+encodeURIComponent(editingId),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({type:$('editType').value,amount:Number($('editAmount').value),category:$('editCategory').value,staff:$('editStaff').value,description:$('editDescription').value})});
+   $('editPanel').classList.add('hidden');editingId=null;setMessage('transactionMsg','Transaction updated.',true);await loadTransactions();
+ }catch(error){setMessage('editMsg','Could not update transaction: '+error.message)}
+});
+$('staffPanel').addEventListener('submit',async e=>{
+ e.preventDefault(); if(!isAdmin()) return;
+ try{
+   setMessage('staffMsg','Creating staff login…',true);
+   const r=await fetch('/api/staff',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({full_name:$('staffFullName').value,email:$('staffEmail').value,password:$('staffPassword').value})});
+   const data=await r.json(); if(!r.ok) throw new Error(data.error||'Could not create staff user.');
+   e.target.reset();setMessage('staffMsg',`Staff login created for ${data.staff.email}.`,true);
+ }catch(error){setMessage('staffMsg',error.message)}
 });
 </script>
 </body>
