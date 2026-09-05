@@ -3,7 +3,11 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
-const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+// Older Render setups stored the REST endpoint here; normalize both forms.
+const SUPABASE_URL = (process.env.SUPABASE_URL || '')
+  .replace(/\/$/, '')
+  .replace(/\/rest\/v1$/, '');
+const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
@@ -63,7 +67,7 @@ async function requireAdmin(req) {
   const user = await readJson(userResponse);
 
   const profileResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?select=role&id=eq.${encodeURIComponent(user.id)}`,
+    `${SUPABASE_REST_URL}/profiles?select=role&id=eq.${encodeURIComponent(user.id)}`,
     { headers: serviceHeaders() }
   );
   const profiles = await readJson(profileResponse);
@@ -77,7 +81,7 @@ async function requireAdmin(req) {
 }
 
 app.get('/health', (req, res) => {
-  res.json({ ok: true, version: '2.1.0' });
+  res.json({ ok: true, version: '2.1.1' });
 });
 
 // Supabase Auth helper used by the Version 2 login screen.
@@ -126,7 +130,7 @@ app.post('/api/staff', async (req, res) => {
     const authUser = await readJson(authResponse);
     createdUserId = authUser.id;
 
-    const profileResponse = await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
+    const profileResponse = await fetch(`${SUPABASE_REST_URL}/profiles`, {
       method: 'POST',
       headers: { ...serviceHeaders(), Prefer: 'return=representation' },
       body: JSON.stringify({ id: createdUserId, full_name: fullName, role: 'staff' })
@@ -155,7 +159,7 @@ app.post('/api/staff', async (req, res) => {
 // Supabase client for data operations once RLS is enabled.
 app.get('/api/transactions', async (req, res) => {
   try {
-    const response = await fetch(`${SUPABASE_URL}/transactions?select=*&order=date.desc,created_at.desc`, {
+    const response = await fetch(`${SUPABASE_REST_URL}/transactions?select=*&order=date.desc,created_at.desc`, {
       headers: sbHeaders()
     });
     const text = await response.text();
@@ -167,7 +171,7 @@ app.get('/api/transactions', async (req, res) => {
 
 app.post('/api/transactions', async (req, res) => {
   try {
-    const response = await fetch(`${SUPABASE_URL}/transactions`, {
+    const response = await fetch(`${SUPABASE_REST_URL}/transactions`, {
       method: 'POST',
       headers: { ...sbHeaders(), Prefer: 'return=representation' },
       body: JSON.stringify(req.body)
@@ -184,5 +188,5 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`WUTNYANG BUSINESS CENTER v2.1 running on port ${PORT}`);
+  console.log(`WUTNYANG BUSINESS CENTER v2.1.1 running on port ${PORT}`);
 });
