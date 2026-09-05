@@ -155,6 +155,62 @@ app.post('/api/staff', async (req, res) => {
   }
 });
 
+
+// Lists only staff profiles. This route uses the same server-side Admin check
+// as creation, so staff and managers cannot discover or manage accounts.
+app.get('/api/staff', async (req, res) => {
+  try {
+    await requireAdmin(req);
+    const profileResponse = await fetch(
+      `${SUPABASE_REST_URL}/profiles?select=id,full_name&role=eq.staff&order=full_name.asc`,
+      { headers: serviceHeaders() }
+    );
+    const staff = await readJson(profileResponse);
+    res.json({ staff });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || 'Could not load staff users.' });
+  }
+});
+
+// Permanently removes a staff Auth account and its profile. The target is
+// checked server-side so an Admin cannot accidentally delete an Admin/Manager.
+app.delete('/api/staff/:id', async (req, res) => {
+  try {
+    await requireAdmin(req);
+    const staffId = String(req.params.id || '');
+    const profileResponse = await fetch(
+      `${SUPABASE_REST_URL}/profiles?select=id,role,full_name&id=eq.${encodeURIComponent(staffId)}`,
+      { headers: serviceHeaders() }
+    );
+    const profiles = await readJson(profileResponse);
+    const target = profiles[0];
+
+    if (!target || target.role !== 'staff') {
+      const error = new Error('Only staff accounts can be deleted here.');
+      error.status = 404;
+      throw error;
+    }
+
+    const authResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(staffId)}`, {
+      method: 'DELETE',
+      headers: serviceHeaders()
+    });
+    await readJson(authResponse);
+
+    // Most Supabase profile tables cascade with Auth deletion. This cleanup
+    // also handles projects where that relationship was created without a cascade.
+    const cleanupResponse = await fetch(
+      `${SUPABASE_REST_URL}/profiles?id=eq.${encodeURIComponent(staffId)}`,
+      { method: 'DELETE', headers: serviceHeaders() }
+    );
+    await readJson(cleanupResponse);
+
+    res.json({ message: 'Staff account deleted.', staff: { id: staffId, full_name: target.full_name } });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || 'Could not delete staff user.' });
+  }
+});
+
 // Kept for the existing working app; Version 2 frontend uses the authenticated
 // Supabase client for data operations once RLS is enabled.
 app.get('/api/transactions', async (req, res) => {
