@@ -133,17 +133,40 @@ async function loadProfile(){
 }
 async function loadTransactions(){ transactions=await supa('/rest/v1/transactions?select=*&order=date.desc,created_at.desc'); render(); }
 
+async function startSession(nextSession){
+ session=nextSession;
+ localStorage.setItem('wbc_session', JSON.stringify(session));
+ $('loginPanel').classList.add('hidden'); $('app').classList.remove('hidden');
+ $('userEmail').textContent=session.user.email||'';
+ await loadProfile(); await loadTransactions(); setMessage('loginMsg','');
+}
+
+async function restoreSession(){
+ const saved=localStorage.getItem('wbc_session');
+ if(!saved) return;
+ try{
+   const previous=JSON.parse(saved);
+   if(!previous.refresh_token) throw new Error('No saved refresh token');
+   const refreshed=await supa('/auth/v1/token?grant_type=refresh_token',{
+     method:'POST',
+     body:JSON.stringify({refresh_token:previous.refresh_token})
+   });
+   await startSession(refreshed);
+ }catch(_){
+   localStorage.removeItem('wbc_session');
+ }
+}
+
 async function login(){
  try{
    setMessage('loginMsg','Signing in…',true);
-   session=await supa('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})});
-   $('loginPanel').classList.add('hidden'); $('app').classList.remove('hidden'); $('userEmail').textContent=session.user.email||'';
-   await loadProfile(); await loadTransactions(); setMessage('loginMsg','');
+   const signedIn=await supa('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})});
+   await startSession(signedIn);
  }catch(e){setMessage('loginMsg',e.message)}
 }
 $('loginBtn').onclick=login;
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter') login()});
-$('logoutBtn').onclick=()=>{session=null;transactions=[];currentRole='';profileName='';editingId=null;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';setMessage('loginMsg','');};
+$('logoutBtn').onclick=()=>{localStorage.removeItem('wbc_session');session=null;transactions=[];currentRole='';profileName='';editingId=null;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';setMessage('loginMsg','');};
 
 $('form').addEventListener('submit',async e=>{
  e.preventDefault(); if(!session) return;
@@ -180,6 +203,7 @@ $('staffPanel').addEventListener('submit',async e=>{
    e.target.reset();setMessage('staffMsg',`Staff login created for ${data.staff.email}.`,true);
  }catch(error){setMessage('staffMsg',error.message)}
 });
+restoreSession();
 </script>
 </body>
 </html>
