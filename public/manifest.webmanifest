@@ -1,0 +1,18 @@
+{
+  "name": "Wutnyang Business Center",
+  "short_name": "Wutnyang",
+  "description": "Wutnyang Business Center income and expense manager.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0e1726",
+  "theme_color": "#0e1726",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
