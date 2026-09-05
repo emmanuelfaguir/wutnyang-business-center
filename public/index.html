@@ -100,18 +100,19 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_gNfIHTXeljHstcERpUCxxQ_hDCEfKel
 let session = null, transactions = [], currentRole = '', profileName = '', editingId = null;
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const formatAmount = value => Number(value || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 function setMessage(id, text, ok=false){ $(id).textContent=text; $(id).style.color=ok?'green':'crimson'; }
 function isAdmin(){ return currentRole === 'admin'; }
 
 function render(){
  let inc=0, exp=0;
  transactions.forEach(t => t.type === 'Income' ? inc += Number(t.amount) : exp += Number(t.amount));
- $('income').textContent=inc.toFixed(2); $('expense').textContent=exp.toFixed(2);
- $('balance').textContent=(inc-exp).toFixed(2); $('count').textContent=transactions.length;
+ $('income').textContent=formatAmount(inc); $('expense').textContent=formatAmount(exp);
+ $('balance').textContent=formatAmount(inc-exp); $('count').textContent=transactions.length;
  $('actionsHeader').classList.toggle('hidden', !isAdmin());
  $('rows').innerHTML=transactions.map(t => {
    const actions = isAdmin() ? `<td><button class="small secondary" data-action="edit" data-id="${escapeHtml(t.id)}">Edit</button><button class="small danger" data-action="delete" data-id="${escapeHtml(t.id)}">Delete</button></td>` : '';
-   return `<tr><td>${escapeHtml(t.date)}</td><td>${escapeHtml(t.type)}</td><td>${Number(t.amount||0).toFixed(2)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.staff)}</td><td>${escapeHtml(t.description)}</td>${actions}</tr>`;
+   return `<tr><td>${escapeHtml(t.date)}</td><td>${escapeHtml(t.type)}</td><td>${formatAmount(t.amount)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.staff)}</td><td>${escapeHtml(t.description)}</td>${actions}</tr>`;
  }).join('');
 }
 
