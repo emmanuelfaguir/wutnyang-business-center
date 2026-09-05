@@ -8,7 +8,7 @@
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#1f2937}
 header{background:#111827;color:#fff;padding:22px;text-align:center}main{max-width:1100px;margin:20px auto;padding:0 16px}
 .panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
-input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}
+input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}
 .hidden{display:none}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}.form-message{margin-top:8px;min-height:18px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}.table-wrap{overflow-x:auto}}
 </style>
@@ -53,7 +53,7 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 <option>Supplies</option><option>Rent</option><option>Electricity</option>
 <option>Water</option><option>Staff</option><option>Maintenance</option><option>Other</option>
 </select>
-<input id="staff" placeholder="Staff name">
+<input id="staff" placeholder="Recorded by your login" readonly title="The recorded-by name is set automatically from the signed-in account.">
 <input id="description" placeholder="Description">
 <button type="submit">Save Transaction</button>
 <div id="transactionMsg" class="form-message"></div>
@@ -69,7 +69,7 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 <option>Supplies</option><option>Rent</option><option>Electricity</option>
 <option>Water</option><option>Staff</option><option>Maintenance</option><option>Other</option>
 </select>
-<input id="editStaff" placeholder="Staff name">
+<input id="editStaff" placeholder="Recorded by" readonly title="The original recorded-by name cannot be changed.">
 <input id="editDescription" placeholder="Description">
 <button type="submit">Save Changes</button><button type="button" id="cancelEditBtn" class="secondary">Cancel</button>
 <div id="editMsg" class="form-message"></div>
@@ -148,7 +148,7 @@ $('logoutBtn').onclick=()=>{session=null;transactions=[];currentRole='';profileN
 $('form').addEventListener('submit',async e=>{
  e.preventDefault(); if(!session) return;
  try{
-   await supa('/rest/v1/transactions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({date:new Date().toISOString().slice(0,10),type:$('type').value,amount:Number($('amount').value),category:$('category').value,staff:$('staff').value,description:$('description').value,user_id:session.user.id})});
+   await supa('/rest/v1/transactions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({date:new Date().toISOString().slice(0,10),type:$('type').value,amount:Number($('amount').value),category:$('category').value,description:$('description').value,user_id:session.user.id})});
    e.target.reset(); $('staff').value=profileName; setMessage('transactionMsg','Transaction saved.',true); await loadTransactions();
  }catch(e){setMessage('transactionMsg','Could not save transaction: '+e.message)}
 });
@@ -167,7 +167,7 @@ $('cancelEditBtn').onclick=()=>{$('editPanel').classList.add('hidden');editingId
 $('editPanel').addEventListener('submit',async e=>{
  e.preventDefault(); if(!isAdmin() || !editingId) return;
  try{
-   await supa('/rest/v1/transactions?id=eq.'+encodeURIComponent(editingId),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({type:$('editType').value,amount:Number($('editAmount').value),category:$('editCategory').value,staff:$('editStaff').value,description:$('editDescription').value})});
+   await supa('/rest/v1/transactions?id=eq.'+encodeURIComponent(editingId),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({type:$('editType').value,amount:Number($('editAmount').value),category:$('editCategory').value,description:$('editDescription').value})});
    $('editPanel').classList.add('hidden');editingId=null;setMessage('transactionMsg','Transaction updated.',true);await loadTransactions();
  }catch(error){setMessage('editMsg','Could not update transaction: '+error.message)}
 });
