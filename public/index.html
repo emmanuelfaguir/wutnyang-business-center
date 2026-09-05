@@ -8,7 +8,7 @@
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#1f2937}
 header{background:#0e1726;color:#fff;padding:20px 22px 22px;text-align:center;border-bottom:3px solid #d4a12f}header h1{margin:0;letter-spacing:.4px}.brand-logo{display:block;width:min(340px,76vw);height:auto;margin:8px auto 6px;border-radius:14px;box-shadow:0 8px 24px #0004}header p{margin:0;color:#e5e7eb}main{max-width:1100px;margin:20px auto;padding:0 16px}
 .panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
-input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}
+input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}.action-menu{display:inline-block;min-width:96px}.action-menu summary{list-style:none;background:#374151;color:#fff;cursor:pointer;border-radius:8px;padding:7px 9px;font-size:12px;text-align:center}.action-menu summary::-webkit-details-marker{display:none}.action-options{display:flex;gap:4px;margin-top:4px;justify-content:center}
 .hidden{display:none}.panel-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.panel-heading h2{margin:0 0 10px}.panel-heading p{margin:0}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}.form-message{margin-top:8px;min-height:18px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}.table-wrap{overflow-x:auto}}
 </style>
@@ -120,7 +120,7 @@ function render(){
  $('balance').textContent=formatAmount(inc-exp); $('count').textContent=transactions.length;
  $('actionsHeader').classList.toggle('hidden', !isAdmin());
  $('rows').innerHTML=transactions.map(t => {
-   const actions = isAdmin() ? `<td><button class="small secondary" data-action="edit" data-id="${escapeHtml(t.id)}">Edit</button><button class="small danger" data-action="delete" data-id="${escapeHtml(t.id)}">Delete</button></td>` : '';
+   const actions = isAdmin() ? `<td><details class="action-menu"><summary>Actions ▾</summary><div class="action-options"><button class="small secondary" data-action="edit" data-id="${escapeHtml(t.id)}">Edit</button><button class="small danger" data-action="delete" data-id="${escapeHtml(t.id)}">Delete</button></div></details></td>` : '';
    return `<tr><td>${escapeHtml(t.date)}</td><td>${escapeHtml(t.type)}</td><td>${formatAmount(t.amount)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.staff)}</td><td>${escapeHtml(t.description)}</td>${actions}</tr>`;
  }).join('');
 }
