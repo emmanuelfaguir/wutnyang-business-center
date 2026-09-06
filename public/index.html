@@ -14,7 +14,7 @@
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#1f2937}
 header{background:#0e1726;color:#fff;padding:20px 22px 22px;text-align:center;border-bottom:3px solid #d4a12f}header h1{margin:0;letter-spacing:.4px}.brand-logo{display:block;width:min(340px,76vw);height:auto;margin:8px auto 6px;border-radius:14px;box-shadow:0 8px 24px #0004}header p{margin:0;color:#e5e7eb}main{max-width:1100px;margin:20px auto;padding:0 16px}
 .panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
-input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}.action-menu{display:inline-block;min-width:96px}.action-menu summary{list-style:none;background:#374151;color:#fff;cursor:pointer;border-radius:8px;padding:7px 9px;font-size:12px;text-align:center}.action-menu summary::-webkit-details-marker{display:none}.action-options{display:flex;gap:4px;margin-top:4px;justify-content:center}
+input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}.action-menu{display:inline-block;min-width:96px}.action-menu summary{list-style:none;background:#374151;color:#fff;cursor:pointer;border-radius:8px;padding:7px 9px;font-size:12px;text-align:center}.action-menu summary::-webkit-details-marker{display:none}.action-options{display:flex;gap:4px;margin-top:4px;justify-content:center}.period-year,.period-month{border:1px solid #e5e7eb;border-radius:10px;margin:10px 0;background:#fff}.period-year>summary,.period-month>summary{cursor:pointer;padding:13px 15px;font-weight:700;list-style:none}.period-year>summary::-webkit-details-marker,.period-month>summary::-webkit-details-marker{display:none}.period-year>summary::after,.period-month>summary::after{content:'⌄';float:right}.period-year[open]>summary::after,.period-month[open]>summary::after{content:'⌃'}.period-content{padding:0 12px 12px}
 .hidden{display:none}.panel-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.panel-heading h2{margin:0 0 10px}.panel-heading p{margin:0}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}.form-message{margin-top:8px;min-height:18px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}.table-wrap{overflow-x:auto}}
 </style>
@@ -43,10 +43,10 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 </div>
 
 <section class="cards">
-<div class="card">Income<b id="income">0.00</b></div>
-<div class="card">Expenses<b id="expense">0.00</b></div>
-<div class="card">Balance<b id="balance">0.00</b></div>
-<div class="card">Records<b id="count">0</b></div>
+<div class="card">This Month’s Income<b id="income">0.00</b></div>
+<div class="card">This Month’s Expenses<b id="expense">0.00</b></div>
+<div class="card">This Month’s Balance<b id="balance">0.00</b></div>
+<div class="card">This Month’s Records<b id="count">0</b></div>
 </section>
 
 <form id="form" class="panel">
@@ -102,10 +102,16 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 </section>
 
 <div class="panel">
-<h2>Transactions</h2>
+<h2>This Month’s Transactions</h2>
 <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th><th id="actionsHeader" class="hidden">Actions</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
 </div>
+
+<section id="previousPanel" class="panel hidden">
+<h2>Previous Transactions</h2>
+<p>Open a year, then a month, to view that month’s complete transaction details.</p>
+<div id="previousGroups"></div>
+</section>
 </section>
 </main>
 
@@ -119,16 +125,49 @@ const formatAmount = value => Number(value || 0).toLocaleString('en-US', {minimu
 function setMessage(id, text, ok=false){ $(id).textContent=text; $(id).style.color=ok?'green':'crimson'; }
 function isAdmin(){ return currentRole === 'admin'; }
 
-function render(){
- let inc=0, exp=0;
- transactions.forEach(t => t.type === 'Income' ? inc += Number(t.amount) : exp += Number(t.amount));
- $('income').textContent=formatAmount(inc); $('expense').textContent=formatAmount(exp);
- $('balance').textContent=formatAmount(inc-exp); $('count').textContent=transactions.length;
- $('actionsHeader').classList.toggle('hidden', !isAdmin());
- $('rows').innerHTML=transactions.map(t => {
-   const actions = isAdmin() ? `<td><details class="action-menu"><summary>Actions ▾</summary><div class="action-options"><button class="small secondary" data-action="edit" data-id="${escapeHtml(t.id)}">Edit</button><button class="small danger" data-action="delete" data-id="${escapeHtml(t.id)}">Delete</button></div></details></td>` : '';
-   return `<tr><td>${escapeHtml(t.date)}</td><td>${escapeHtml(t.type)}</td><td>${formatAmount(t.amount)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.staff)}</td><td>${escapeHtml(t.description)}</td>${actions}</tr>`;
+function currentMonthKey(){ return new Date().toISOString().slice(0,7); }
+function transactionRow(t){
+ const actions = isAdmin() ? `<td><details class="action-menu"><summary>Actions ▾</summary><div class="action-options"><button class="small secondary" data-action="edit" data-id="${escapeHtml(t.id)}">Edit</button><button class="small danger" data-action="delete" data-id="${escapeHtml(t.id)}">Delete</button></div></details></td>` : '';
+ return `<tr><td>${escapeHtml(t.date)}</td><td>${escapeHtml(t.type)}</td><td>${formatAmount(t.amount)}</td><td>${escapeHtml(t.category)}</td><td>${escapeHtml(t.staff)}</td><td>${escapeHtml(t.description)}</td>${actions}</tr>`;
+}
+function transactionTable(records){
+ const actionHeader=isAdmin()?'<th>Actions</th>':'';
+ return `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th>${actionHeader}</tr></thead><tbody>${records.map(transactionRow).join('')}</tbody></table></div>`;
+}
+function renderPreviousTransactions(){
+ const panel=$('previousPanel');
+ // Staff accounts are intentionally excluded: database permissions allow them
+ // to see only today's transactions.
+ if(currentRole==='staff'){ panel.classList.add('hidden'); return; }
+ panel.classList.remove('hidden');
+ const previous=transactions.filter(t=>String(t.date||'').slice(0,7)<currentMonthKey());
+ if(!previous.length){ $('previousGroups').innerHTML='<p>No previous transactions yet.</p>'; return; }
+
+ const years=new Map();
+ previous.forEach(t=>{
+   const [year,month]=String(t.date).split('-');
+   if(!years.has(year)) years.set(year,new Map());
+   const months=years.get(year);
+   if(!months.has(month)) months.set(month,[]);
+   months.get(month).push(t);
+ });
+ $('previousGroups').innerHTML=[...years.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([year,months])=>{
+   const monthHtml=[...months.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([month,records])=>{
+     const monthName=new Date(Number(year),Number(month)-1,1).toLocaleString('en-US',{month:'long'});
+     return `<details class="period-month"><summary>${escapeHtml(monthName)} ${escapeHtml(year)} (${records.length} record${records.length===1?'':'s'})</summary><div class="period-content">${transactionTable(records)}</div></details>`;
+   }).join('');
+   return `<details class="period-year"><summary>${escapeHtml(year)}</summary><div class="period-content">${monthHtml}</div></details>`;
  }).join('');
+}
+function render(){
+ const current=transactions.filter(t=>String(t.date||'').slice(0,7)===currentMonthKey());
+ let inc=0, exp=0;
+ current.forEach(t => t.type === 'Income' ? inc += Number(t.amount) : exp += Number(t.amount));
+ $('income').textContent=formatAmount(inc); $('expense').textContent=formatAmount(exp);
+ $('balance').textContent=formatAmount(inc-exp); $('count').textContent=current.length;
+ $('actionsHeader').classList.toggle('hidden', !isAdmin());
+ $('rows').innerHTML=current.map(transactionRow).join('');
+ renderPreviousTransactions();
 }
 
 async function supa(path, options={}){
@@ -214,7 +253,7 @@ $('form').addEventListener('submit',async e=>{
  }catch(e){setMessage('transactionMsg','Could not save transaction: '+e.message)}
 });
 
-$('rows').addEventListener('click',async e=>{
+$('app').addEventListener('click',async e=>{
  const button=e.target.closest('button[data-action]'); if(!button || !isAdmin()) return;
  const transaction=transactions.find(t=>String(t.id)===button.dataset.id); if(!transaction) return;
  if(button.dataset.action==='edit'){
