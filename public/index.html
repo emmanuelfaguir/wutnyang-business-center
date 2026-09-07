@@ -252,49 +252,88 @@ function fitPdf(value,length){
  const text=String(value ?? '');
  return text.length>length ? text.slice(0,Math.max(0,length-3))+'...' : text;
 }
-function transactionPdfLines(title,records){
- let income=0, expenses=0;
- records.forEach(t=>t.type==='Income'?income+=Number(t.amount):expenses+=Number(t.amount));
- const lines=[
-   'WUTNYANG BUSINESS CENTER',
-   title,
-   'Generated: '+new Date().toLocaleString(),
-   'Income: '+formatAmount(income)+'    Expenses: '+formatAmount(expenses)+'    Balance: '+formatAmount(income-expenses),
-   '',
-   'Date       Type      Amount          Category               Staff                  Description',
-   '---------------------------------------------------------------------------------------------'
+function pdfCommand(x,y,size,value,font='F1'){
+ return '/'+font+' '+size+' Tf\n1 0 0 1 '+x+' '+y+' Tm ('+pdfText(value)+') Tj';
+}
+function pdfCenteredX(value,size){
+ return Math.max(46,Math.round(306-(String(value).length*size*.30)));
+}
+function formatPdfDate(){
+ return new Date().toLocaleString([], {year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function pdfRecordPages(records){
+ const rowsPerPage=27, pages=[];
+ for(let i=0;i<records.length;i+=rowsPerPage) pages.push(records.slice(i,i+rowsPerPage));
+ return pages;
+}
+function pdfRecordRow(t){
+ return [
+   fitPdf(t.date,10),
+   fitPdf(t.type,9),
+   fitPdf(formatAmount(t.amount),14),
+   fitPdf(t.category,19),
+   fitPdf(t.staff,18),
+   fitPdf(t.description,22)
  ];
- records.forEach(t=>lines.push(
-   fitPdf(t.date,10).padEnd(10)+' '+
-   fitPdf(t.type,9).padEnd(9)+' '+
-   fitPdf(formatAmount(t.amount),15).padEnd(15)+' '+
-   fitPdf(t.category,21).padEnd(21)+' '+
-   fitPdf(t.staff,22).padEnd(22)+' '+
-   fitPdf(t.description,28)
- ));
- return lines;
 }
 function downloadTransactionsPdf(title,records){
  if(!records.length) return;
- const lines=transactionPdfLines(title,records);
- const perPage=43;
- const pageLines=[];
- for(let i=0;i<lines.length;i+=perPage) pageLines.push(lines.slice(i,i+perPage));
- const pageCount=pageLines.length;
+ let income=0, expenses=0;
+ records.forEach(t=>t.type==='Income'?income+=Number(t.amount):expenses+=Number(t.amount));
+ const pages=pdfRecordPages(records);
+ const pageCount=pages.length;
  const objects=[];
  objects.push('<< /Type /Catalog /Pages 2 0 R >>');
- const pageObjectNumbers=pageLines.map((_,index)=>3+index*2);
+ const pageObjectNumbers=pages.map((_,index)=>3+index*2);
  objects.push('<< /Type /Pages /Kids ['+pageObjectNumbers.map(number=>number+' 0 R').join(' ')+'] /Count '+pageCount+' >>');
- pageLines.forEach((page,index)=>{
-   const pageNumber=3+index*2, contentNumber=pageNumber+1, fontNumber=3+pageCount*2;
-   const commands=['BT','/F1 15 Tf','1 0 0 1 46 760 Tm ('+pdfText('WUTNYANG BUSINESS CENTER')+') Tj','/F1 11 Tf','1 0 0 1 46 738 Tm ('+pdfText(title)+' - Page '+(index+1)+' of '+pageCount+') Tj','/F1 8 Tf'];
-   page.forEach((line,lineIndex)=>commands.push('1 0 0 1 46 '+(714-lineIndex*15)+' Tm ('+pdfText(line)+') Tj'));
+ const normalFontNumber=3+pageCount*2;
+ const boldFontNumber=normalFontNumber+1;
+ pages.forEach((page,index)=>{
+   const pageNumber=3+index*2;
+   const contentNumber=pageNumber+1;
+   const pageTitle=title+' - Page '+(index+1)+' of '+pageCount;
+   const commands=[
+     '0.12 0.12 0.12 rg',
+     'BT',
+     pdfCommand(pdfCenteredX('WUTNYANG BUSINESS CENTER',22),757,22,'WUTNYANG BUSINESS CENTER','F2'),
+     pdfCommand(46,734,11,pageTitle),
+     pdfCommand(46,709,11,'WUTNYANG BUSINESS CENTER'),
+     pdfCommand(46,692,11,title),
+     pdfCommand(46,675,10,'Generated: '+formatPdfDate()),
+     pdfCommand(46,657,11,'Income: '+formatAmount(income),'F2'),
+     pdfCommand(220,657,11,'Expenses: '+formatAmount(expenses),'F2'),
+     pdfCommand(402,657,11,'Balance: '+formatAmount(income-expenses),'F2'),
+     pdfCommand(46,624,10,'Date','F2'),
+     pdfCommand(121,624,10,'Type','F2'),
+     pdfCommand(195,624,10,'Amount','F2'),
+     pdfCommand(272,624,10,'Category','F2'),
+     pdfCommand(375,624,10,'Staff','F2'),
+     pdfCommand(485,624,10,'Description','F2'),
+     'ET',
+     '0.15 w',
+     '136 750 m 476 750 l S',
+     '46 611 m 566 611 l S',
+     'BT'
+   ];
+   page.forEach((t,rowIndex)=>{
+     const [date,type,amount,category,staff,description]=pdfRecordRow(t);
+     const y=593-rowIndex*18;
+     commands.push(
+       pdfCommand(46,y,10,date),
+       pdfCommand(121,y,10,type),
+       pdfCommand(195,y,10,amount),
+       pdfCommand(272,y,10,category),
+       pdfCommand(375,y,10,staff),
+       pdfCommand(485,y,10,description)
+     );
+   });
    commands.push('ET');
    const stream=commands.join('\n');
-   objects[pageNumber-1]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 '+fontNumber+' 0 R >> >> /Contents '+contentNumber+' 0 R >>';
+   objects[pageNumber-1]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 '+normalFontNumber+' 0 R /F2 '+boldFontNumber+' 0 R >> >> /Contents '+contentNumber+' 0 R >>';
    objects[contentNumber-1]='<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream';
  });
  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+ objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
  let pdf='%PDF-1.4\n';
  const offsets=[0];
  objects.forEach((object,index)=>{ offsets[index+1]=pdf.length; pdf+=(index+1)+' 0 obj\n'+object+'\nendobj\n'; });
@@ -305,7 +344,10 @@ function downloadTransactionsPdf(title,records){
  const link=document.createElement('a');
  link.href=URL.createObjectURL(new Blob([pdf],{type:'application/pdf'}));
  link.download=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.pdf';
- document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(link.href);
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ URL.revokeObjectURL(link.href);
 }
 $('downloadCurrentBtn').onclick=()=>downloadTransactionsPdf('This Month Transactions - '+currentMonthKey(),transactions.filter(t=>String(t.date||'').slice(0,7)===currentMonthKey()));
 $('downloadPreviousBtn').onclick=()=>downloadTransactionsPdf('Previous Transactions',previousTransactions());
