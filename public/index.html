@@ -258,11 +258,38 @@ function pdfCommand(x,y,size,value,font='F1'){
 function pdfCenteredX(value,size){
  return Math.max(46,Math.round(306-(String(value).length*size*.30)));
 }
+function pdfBinaryBytes(value){
+ const bytes=new Uint8Array(value.length);
+ for(let index=0;index<value.length;index++) bytes[index]=value.charCodeAt(index)&255;
+ return bytes;
+}
 function formatPdfDate(){
  return new Date().toLocaleString([], {year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});
 }
+async function pdfLogo(){
+ const source=document.querySelector('.brand-logo');
+ if(!source) return null;
+ if(!source.complete) await new Promise((resolve,reject)=>{ source.addEventListener('load',resolve,{once:true}); source.addEventListener('error',reject,{once:true}); });
+ if(!source.naturalWidth || !source.naturalHeight) return null;
+ const width=360, height=Math.max(1,Math.round(width*source.naturalHeight/source.naturalWidth));
+ const canvas=document.createElement('canvas');
+ canvas.width=width; canvas.height=height;
+ const context=canvas.getContext('2d');
+ context.fillStyle='#fff';
+ context.fillRect(0,0,width,height);
+ context.drawImage(source,0,0,width,height);
+ const pixels=context.getImageData(0,0,width,height);
+ for(let index=0;index<pixels.data.length;index+=4){
+   const brightness=pixels.data[index]*.299+pixels.data[index+1]*.587+pixels.data[index+2]*.114;
+   const ink=brightness>105 ? 0 : 255;
+   pixels.data[index]=ink; pixels.data[index+1]=ink; pixels.data[index+2]=ink; pixels.data[index+3]=255;
+ }
+ context.putImageData(pixels,0,0);
+ const jpeg=atob(canvas.toDataURL('image/jpeg',.94).split(',')[1]);
+ return {jpeg,width,height};
+}
 function pdfRecordPages(records){
- const rowsPerPage=27, pages=[];
+ const rowsPerPage=23, pages=[];
  for(let i=0;i<records.length;i+=rowsPerPage) pages.push(records.slice(i,i+rowsPerPage));
  return pages;
 }
@@ -276,10 +303,11 @@ function pdfRecordRow(t){
    fitPdf(t.description,22)
  ];
 }
-function downloadTransactionsPdf(title,records){
+async function downloadTransactionsPdf(title,records){
  if(!records.length) return;
  let income=0, expenses=0;
  records.forEach(t=>t.type==='Income'?income+=Number(t.amount):expenses+=Number(t.amount));
+ const logo=await pdfLogo().catch(()=>null);
  const pages=pdfRecordPages(records);
  const pageCount=pages.length;
  const objects=[];
@@ -288,6 +316,7 @@ function downloadTransactionsPdf(title,records){
  objects.push('<< /Type /Pages /Kids ['+pageObjectNumbers.map(number=>number+' 0 R').join(' ')+'] /Count '+pageCount+' >>');
  const normalFontNumber=3+pageCount*2;
  const boldFontNumber=normalFontNumber+1;
+ const imageNumber=logo ? boldFontNumber+1 : null;
  pages.forEach((page,index)=>{
    const pageNumber=3+index*2;
    const contentNumber=pageNumber+1;
@@ -296,28 +325,35 @@ function downloadTransactionsPdf(title,records){
      '0.12 0.12 0.12 rg',
      'BT',
      pdfCommand(pdfCenteredX('WUTNYANG BUSINESS CENTER',22),757,22,'WUTNYANG BUSINESS CENTER','F2'),
-     pdfCommand(46,734,11,pageTitle),
-     pdfCommand(46,709,11,'WUTNYANG BUSINESS CENTER'),
-     pdfCommand(46,692,11,title),
-     pdfCommand(46,675,10,'Generated: '+formatPdfDate()),
-     pdfCommand(46,657,11,'Income: '+formatAmount(income),'F2'),
-     pdfCommand(220,657,11,'Expenses: '+formatAmount(expenses),'F2'),
-     pdfCommand(402,657,11,'Balance: '+formatAmount(income-expenses),'F2'),
-     pdfCommand(46,624,10,'Date','F2'),
-     pdfCommand(121,624,10,'Type','F2'),
-     pdfCommand(195,624,10,'Amount','F2'),
-     pdfCommand(272,624,10,'Category','F2'),
-     pdfCommand(375,624,10,'Staff','F2'),
-     pdfCommand(485,624,10,'Description','F2'),
+     'ET'
+   ];
+   if(logo){
+     const logoWidth=126, logoHeight=Math.round(logoWidth*logo.height/logo.width);
+     commands.push('q '+logoWidth+' 0 0 '+logoHeight+' '+Math.round(306-logoWidth/2)+' 640 cm /Im1 Do Q');
+   }
+   commands.push(
+     'BT',
+     pdfCommand(46,620,11,pageTitle),
+     pdfCommand(46,595,11,'WUTNYANG BUSINESS CENTER'),
+     pdfCommand(46,578,11,title),
+     pdfCommand(46,561,10,'Generated: '+formatPdfDate()),
+     pdfCommand(46,543,11,'Income: '+formatAmount(income),'F2'),
+     pdfCommand(220,543,11,'Expenses: '+formatAmount(expenses),'F2'),
+     pdfCommand(402,543,11,'Balance: '+formatAmount(income-expenses),'F2'),
+     pdfCommand(46,510,10,'Date','F2'),
+     pdfCommand(121,510,10,'Type','F2'),
+     pdfCommand(195,510,10,'Amount','F2'),
+     pdfCommand(272,510,10,'Category','F2'),
+     pdfCommand(375,510,10,'Staff','F2'),
+     pdfCommand(485,510,10,'Description','F2'),
      'ET',
      '0.15 w',
-     '136 750 m 476 750 l S',
-     '46 611 m 566 611 l S',
+     '46 497 m 566 497 l S',
      'BT'
-   ];
+   );
    page.forEach((t,rowIndex)=>{
      const [date,type,amount,category,staff,description]=pdfRecordRow(t);
-     const y=593-rowIndex*18;
+     const y=479-rowIndex*18;
      commands.push(
        pdfCommand(46,y,10,date),
        pdfCommand(121,y,10,type),
@@ -329,11 +365,13 @@ function downloadTransactionsPdf(title,records){
    });
    commands.push('ET');
    const stream=commands.join('\n');
-   objects[pageNumber-1]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 '+normalFontNumber+' 0 R /F2 '+boldFontNumber+' 0 R >> >> /Contents '+contentNumber+' 0 R >>';
+   const imageResources=logo ? ' /XObject << /Im1 '+imageNumber+' 0 R >>' : '';
+   objects[pageNumber-1]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 '+normalFontNumber+' 0 R /F2 '+boldFontNumber+' 0 R >>'+imageResources+' >> /Contents '+contentNumber+' 0 R >>';
    objects[contentNumber-1]='<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream';
  });
  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+ if(logo) objects.push('<< /Type /XObject /Subtype /Image /Width '+logo.width+' /Height '+logo.height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+logo.jpeg.length+' >>\nstream\n'+logo.jpeg+'\nendstream');
  let pdf='%PDF-1.4\n';
  const offsets=[0];
  objects.forEach((object,index)=>{ offsets[index+1]=pdf.length; pdf+=(index+1)+' 0 obj\n'+object+'\nendobj\n'; });
@@ -342,7 +380,7 @@ function downloadTransactionsPdf(title,records){
  offsets.slice(1).forEach(offset=>pdf+=String(offset).padStart(10,'0')+' 00000 n \n');
  pdf+='trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
  const link=document.createElement('a');
- link.href=URL.createObjectURL(new Blob([pdf],{type:'application/pdf'}));
+ link.href=URL.createObjectURL(new Blob([pdfBinaryBytes(pdf)],{type:'application/pdf'}));
  link.download=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.pdf';
  document.body.appendChild(link);
  link.click();
