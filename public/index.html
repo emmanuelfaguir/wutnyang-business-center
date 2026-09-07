@@ -14,7 +14,7 @@
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:#f4f6f8;color:#1f2937}
 header{background:#0e1726;color:#fff;padding:20px 22px 22px;text-align:center;border-bottom:3px solid #d4a12f}header h1{margin:0;letter-spacing:.4px}.brand-logo{display:block;width:min(340px,76vw);height:auto;margin:8px auto 6px;border-radius:14px;box-shadow:0 8px 24px #0004}header p{margin:0;color:#e5e7eb}main{max-width:1100px;margin:20px auto;padding:0 16px}
 .panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
-input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}.action-menu{display:inline-block;min-width:96px}.action-menu summary{list-style:none;background:#374151;color:#fff;cursor:pointer;border-radius:8px;padding:7px 9px;font-size:12px;text-align:center}.action-menu summary::-webkit-details-marker{display:none}.action-options{display:flex;gap:4px;margin-top:4px;justify-content:center}.period-year,.period-month{border:1px solid #e5e7eb;border-radius:10px;margin:10px 0;background:#fff}.period-year>summary,.period-month>summary{cursor:pointer;padding:13px 15px;font-weight:700;list-style:none}.period-year>summary::-webkit-details-marker,.period-month>summary::-webkit-details-marker{display:none}.period-year>summary::after,.period-month>summary::after{content:'⌄';float:right}.period-year[open]>summary::after,.period-month[open]>summary::after{content:'⌃'}.period-content{padding:0 12px 12px}
+input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}button:disabled{opacity:.55;cursor:not-allowed}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}.action-menu{display:inline-block;min-width:96px}.action-menu summary{list-style:none;background:#374151;color:#fff;cursor:pointer;border-radius:8px;padding:7px 9px;font-size:12px;text-align:center}.action-menu summary::-webkit-details-marker{display:none}.action-options{display:flex;gap:4px;margin-top:4px;justify-content:center}.period-year,.period-month{border:1px solid #e5e7eb;border-radius:10px;margin:10px 0;background:#fff}.period-year>summary,.period-month>summary{cursor:pointer;padding:13px 15px;font-weight:700;list-style:none}.period-year>summary::-webkit-details-marker,.period-month>summary::-webkit-details-marker{display:none}.period-year>summary::after,.period-month>summary::after{content:'⌄';float:right}.period-year[open]>summary::after,.period-month[open]>summary::after{content:'⌃'}.period-content{padding:0 12px 12px}
 .hidden{display:none}.panel-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.panel-heading h2{margin:0 0 10px}.panel-heading p{margin:0}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}.form-message{margin-top:8px;min-height:18px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}.table-wrap{overflow-x:auto}}
 </style>
@@ -102,14 +102,13 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 </section>
 
 <div class="panel">
-<h2>This Month’s Transactions</h2>
+<div class="panel-heading"><h2>This Month’s Transactions</h2><button id="downloadCurrentBtn" type="button" class="secondary">Download PDF</button></div>
 <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th><th id="actionsHeader" class="hidden">Actions</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
 </div>
 
 <section id="previousPanel" class="panel hidden">
-<h2>Previous Transactions</h2>
-<p>Open a year, then a month, to view that month’s complete transaction details.</p>
+<div class="panel-heading"><div><h2>Previous Transactions</h2><p>Open a year, then a month, to view that month’s complete transaction details.</p></div><button id="downloadPreviousBtn" type="button" class="secondary">Download PDF</button></div>
 <div id="previousGroups"></div>
 </section>
 </section>
@@ -134,13 +133,15 @@ function transactionTable(records){
  const actionHeader=isAdmin()?'<th>Actions</th>':'';
  return `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th>${actionHeader}</tr></thead><tbody>${records.map(transactionRow).join('')}</tbody></table></div>`;
 }
+function previousTransactions(){ return transactions.filter(t=>String(t.date||'').slice(0,7)<currentMonthKey()); }
 function renderPreviousTransactions(){
  const panel=$('previousPanel');
  // Staff accounts are intentionally excluded: database permissions allow them
  // to see only today's transactions.
  if(currentRole==='staff'){ panel.classList.add('hidden'); return; }
  panel.classList.remove('hidden');
- const previous=transactions.filter(t=>String(t.date||'').slice(0,7)<currentMonthKey());
+ const previous=previousTransactions();
+ $('downloadPreviousBtn').disabled=!previous.length;
  if(!previous.length){ $('previousGroups').innerHTML='<p>No previous transactions yet.</p>'; return; }
 
  const years=new Map();
@@ -154,9 +155,9 @@ function renderPreviousTransactions(){
  $('previousGroups').innerHTML=[...years.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([year,months])=>{
    const monthHtml=[...months.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([month,records])=>{
      const monthName=new Date(Number(year),Number(month)-1,1).toLocaleString('en-US',{month:'long'});
-     return `<details class="period-month"><summary>${escapeHtml(monthName)} ${escapeHtml(year)} (${records.length} record${records.length===1?'':'s'})</summary><div class="period-content">${transactionTable(records)}</div></details>`;
+     return `<details class="period-month"><summary>${escapeHtml(monthName)} ${escapeHtml(year)} (${records.length} record${records.length===1?'':'s'})</summary><div class="period-content"><button class="secondary small" type="button" data-download-scope="month" data-period="${escapeHtml(year+'-'+month)}">Download ${escapeHtml(monthName)} PDF</button>${transactionTable(records)}</div></details>`;
    }).join('');
-   return `<details class="period-year"><summary>${escapeHtml(year)}</summary><div class="period-content">${monthHtml}</div></details>`;
+   return `<details class="period-year"><summary>${escapeHtml(year)}</summary><div class="period-content"><button class="secondary small" type="button" data-download-scope="year" data-period="${escapeHtml(year)}">Download ${escapeHtml(year)} PDF</button>${monthHtml}</div></details>`;
  }).join('');
 }
 function render(){
@@ -167,6 +168,7 @@ function render(){
  $('balance').textContent=formatAmount(inc-exp); $('count').textContent=current.length;
  $('actionsHeader').classList.toggle('hidden', !isAdmin());
  $('rows').innerHTML=current.map(transactionRow).join('');
+ $('downloadCurrentBtn').disabled=!current.length;
  renderPreviousTransactions();
 }
 
@@ -244,6 +246,78 @@ async function login(){
 $('loginBtn').onclick=login;
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter') login()});
 $('logoutBtn').onclick=()=>{localStorage.removeItem('wbc_session');session=null;transactions=[];currentRole='';profileName='';editingId=null;staffManagementOpen=false;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';setMessage('loginMsg','');};
+
+function pdfText(value){ return String(value ?? '').replace(/[\\()]/g, char=>'\\'+char).replace(/[^\x20-\x7E]/g,' '); }
+function fitPdf(value,length){
+ const text=String(value ?? '');
+ return text.length>length ? text.slice(0,Math.max(0,length-1))+'…' : text;
+}
+function transactionPdfLines(title,records){
+ let income=0, expenses=0;
+ records.forEach(t=>t.type==='Income'?income+=Number(t.amount):expenses+=Number(t.amount));
+ const lines=[
+   'WUTNYANG BUSINESS CENTER',
+   title,
+   'Generated: '+new Date().toLocaleString(),
+   'Income: '+formatAmount(income)+'    Expenses: '+formatAmount(expenses)+'    Balance: '+formatAmount(income-expenses),
+   '',
+   'Date       Type      Amount          Category               Staff                  Description',
+   '---------------------------------------------------------------------------------------------'
+ ];
+ records.forEach(t=>lines.push(
+   fitPdf(t.date,10).padEnd(10)+' '+
+   fitPdf(t.type,9).padEnd(9)+' '+
+   fitPdf(formatAmount(t.amount),15).padEnd(15)+' '+
+   fitPdf(t.category,21).padEnd(21)+' '+
+   fitPdf(t.staff,22).padEnd(22)+' '+
+   fitPdf(t.description,28)
+ ));
+ return lines;
+}
+function downloadTransactionsPdf(title,records){
+ if(!records.length) return;
+ const lines=transactionPdfLines(title,records);
+ const perPage=43;
+ const pageLines=[];
+ for(let i=0;i<lines.length;i+=perPage) pageLines.push(lines.slice(i,i+perPage));
+ const pageCount=pageLines.length;
+ const objects=[];
+ objects.push('<< /Type /Catalog /Pages 2 0 R >>');
+ const pageObjectNumbers=pageLines.map((_,index)=>3+index*2);
+ objects.push('<< /Type /Pages /Kids ['+pageObjectNumbers.map(number=>number+' 0 R').join(' ')+'] /Count '+pageCount+' >>');
+ pageLines.forEach((page,index)=>{
+   const pageNumber=3+index*2, contentNumber=pageNumber+1, fontNumber=3+pageCount*2;
+   const commands=['BT','/F1 15 Tf','1 0 0 1 46 760 Tm ('+pdfText('WUTNYANG BUSINESS CENTER')+') Tj','/F1 11 Tf','1 0 0 1 46 738 Tm ('+pdfText(title)+' - Page '+(index+1)+' of '+pageCount+') Tj','/F1 8 Tf'];
+   page.forEach((line,lineIndex)=>commands.push('1 0 0 1 46 '+(714-lineIndex*15)+' Tm ('+pdfText(line)+') Tj'));
+   commands.push('ET');
+   const stream=commands.join('\n');
+   objects[pageNumber-1]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 '+fontNumber+' 0 R >> >> /Contents '+contentNumber+' 0 R >>';
+   objects[contentNumber-1]='<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream';
+ });
+ objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+ let pdf='%PDF-1.4\n';
+ const offsets=[0];
+ objects.forEach((object,index)=>{ offsets[index+1]=pdf.length; pdf+=(index+1)+' 0 obj\n'+object+'\nendobj\n'; });
+ const xref=pdf.length;
+ pdf+='xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n';
+ offsets.slice(1).forEach(offset=>pdf+=String(offset).padStart(10,'0')+' 00000 n \n');
+ pdf+='trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+ const link=document.createElement('a');
+ link.href=URL.createObjectURL(new Blob([pdf],{type:'application/pdf'}));
+ link.download=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.pdf';
+ document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(link.href);
+}
+$('downloadCurrentBtn').onclick=()=>downloadTransactionsPdf('This Month Transactions - '+currentMonthKey(),transactions.filter(t=>String(t.date||'').slice(0,7)===currentMonthKey()));
+$('downloadPreviousBtn').onclick=()=>downloadTransactionsPdf('Previous Transactions',previousTransactions());
+$('app').addEventListener('click',e=>{
+ const button=e.target.closest('button[data-download-scope]');
+ if(!button) return;
+ const period=button.dataset.period;
+ const records=button.dataset.downloadScope==='year'
+   ? previousTransactions().filter(t=>String(t.date||'').startsWith(period+'-'))
+   : previousTransactions().filter(t=>String(t.date||'').slice(0,7)===period);
+ downloadTransactionsPdf((button.dataset.downloadScope==='year'?'Year ':'Month ')+period+' Transactions',records);
+});
 
 $('form').addEventListener('submit',async e=>{
  e.preventDefault(); if(!session) return;
