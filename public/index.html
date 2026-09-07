@@ -266,48 +266,8 @@ function pdfBinaryBytes(value){
 function formatPdfDate(){
  return new Date().toLocaleString([], {year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});
 }
-async function pdfLogo(){
- const source=document.querySelector('.brand-logo');
- if(!source) return null;
- if(!source.complete) await new Promise((resolve,reject)=>{ source.addEventListener('load',resolve,{once:true}); source.addEventListener('error',reject,{once:true}); });
- if(!source.naturalWidth || !source.naturalHeight) return null;
- const width=600, height=Math.max(1,Math.round(width*source.naturalHeight/source.naturalWidth));
- const canvas=document.createElement('canvas');
- canvas.width=width; canvas.height=height;
- const context=canvas.getContext('2d');
- context.fillStyle='#fff';
- context.fillRect(0,0,width,height);
- context.drawImage(source,0,0,width,height);
- const pixels=context.getImageData(0,0,width,height);
- let minX=width,minY=height,maxX=-1,maxY=-1;
- for(let index=0;index<pixels.data.length;index+=4){
-   const red=pixels.data[index], green=pixels.data[index+1], blue=pixels.data[index+2];
-   const brightness=red*.299+green*.587+blue*.114;
-   const saturation=Math.max(red,green,blue)-Math.min(red,green,blue);
-   const isGold=brightness>70 && saturation>45 && red>green*1.12 && green>blue*1.15;
-   if(brightness<80){
-     pixels.data[index]=255; pixels.data[index+1]=255; pixels.data[index+2]=255;
-   }else if(!isGold){
-     pixels.data[index]=0; pixels.data[index+1]=0; pixels.data[index+2]=0;
-   }
-   if(isGold || pixels.data[index]<245 || pixels.data[index+1]<245 || pixels.data[index+2]<245){
-     const pixel=index/4, x=pixel%width, y=Math.floor(pixel/width);
-     minX=Math.min(minX,x); minY=Math.min(minY,y); maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
-   }
-   pixels.data[index+3]=255;
- }
- if(maxX<0) return null;
- const padding=8;
- minX=Math.max(0,minX-padding); minY=Math.max(0,minY-padding);
- maxX=Math.min(width-1,maxX+padding); maxY=Math.min(height-1,maxY+padding);
- const crop=document.createElement('canvas');
- crop.width=maxX-minX+1; crop.height=maxY-minY+1;
- crop.getContext('2d').putImageData(context.getImageData(minX,minY,crop.width,crop.height),0,0);
- const jpeg=atob(crop.toDataURL('image/jpeg',.96).split(',')[1]);
- return {jpeg,width:crop.width,height:crop.height};
-}
 function pdfRecordPages(records){
- const firstPageRows=16, laterPageRows=34;
+ const firstPageRows=28, laterPageRows=34;
  const pages=[records.slice(0,firstPageRows)];
  for(let index=firstPageRows;index<records.length;index+=laterPageRows) pages.push(records.slice(index,index+laterPageRows));
  return pages.filter(page=>page.length);
@@ -326,7 +286,6 @@ async function downloadTransactionsPdf(title,records){
  if(!records.length) return;
  let income=0, expenses=0;
  records.forEach(t=>t.type==='Income'?income+=Number(t.amount):expenses+=Number(t.amount));
- const logo=await pdfLogo().catch(()=>null);
  const pages=pdfRecordPages(records);
  const pageCount=pages.length;
  const objects=[];
@@ -335,36 +294,24 @@ async function downloadTransactionsPdf(title,records){
  objects.push('<< /Type /Pages /Kids ['+pageObjectNumbers.map(number=>number+' 0 R').join(' ')+'] /Count '+pageCount+' >>');
  const normalFontNumber=3+pageCount*2;
  const boldFontNumber=normalFontNumber+1;
- const imageNumber=logo ? boldFontNumber+1 : null;
  pages.forEach((page,index)=>{
    const pageNumber=3+index*2;
    const contentNumber=pageNumber+1;
    const firstPage=index===0;
    const commands=['0.12 0.12 0.12 rg','BT'];
    if(firstPage){
-     const pageTitle=title+' - Page 1 of '+pageCount;
      commands.push(
        pdfCommand(pdfCenteredX('WUTNYANG BUSINESS CENTER',22),757,22,'WUTNYANG BUSINESS CENTER','F2'),
-       'ET'
-     );
-     if(logo){
-       const logoWidth=350, logoHeight=Math.round(logoWidth*logo.height/logo.width);
-       commands.push('q '+logoWidth+' 0 0 '+logoHeight+' '+Math.round(306-logoWidth/2)+' 530 cm /Im1 Do Q');
-     }
-     commands.push(
-       'BT',
-       pdfCommand(46,505,11,pageTitle),
-       pdfCommand(46,480,11,'WUTNYANG BUSINESS CENTER'),
-       pdfCommand(46,463,11,title),
-       pdfCommand(46,446,10,'Generated: '+formatPdfDate()),
-       pdfCommand(46,428,11,'Income: '+formatAmount(income),'F2'),
-       pdfCommand(220,428,11,'Expenses: '+formatAmount(expenses),'F2'),
-       pdfCommand(402,428,11,'Balance: '+formatAmount(income-expenses),'F2')
+       pdfCommand(46,724,11,title+' - Page 1 of '+pageCount),
+       pdfCommand(46,707,10,'Generated: '+formatPdfDate()),
+       pdfCommand(46,689,11,'Income: '+formatAmount(income),'F2'),
+       pdfCommand(220,689,11,'Expenses: '+formatAmount(expenses),'F2'),
+       pdfCommand(402,689,11,'Balance: '+formatAmount(income-expenses),'F2')
      );
    }
-   const headingY=firstPage ? 391 : 748;
-   const lineY=firstPage ? 378 : 735;
-   const firstRowY=firstPage ? 360 : 717;
+   const headingY=firstPage ? 653 : 748;
+   const lineY=firstPage ? 640 : 735;
+   const firstRowY=firstPage ? 622 : 717;
    commands.push(
      pdfCommand(46,headingY,10,'Date','F2'),
      pdfCommand(121,headingY,10,'Type','F2'),
@@ -391,13 +338,11 @@ async function downloadTransactionsPdf(title,records){
    });
    commands.push('ET');
    const stream=commands.join('\n');
-   const imageResources=logo ? ' /XObject << /Im1 '+imageNumber+' 0 R >>' : '';
-   objects[pageNumber-1]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 '+normalFontNumber+' 0 R /F2 '+boldFontNumber+' 0 R >>'+imageResources+' >> /Contents '+contentNumber+' 0 R >>';
+   objects[pageNumber-1]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 '+normalFontNumber+' 0 R /F2 '+boldFontNumber+' 0 R >> >> /Contents '+contentNumber+' 0 R >>';
    objects[contentNumber-1]='<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream';
  });
  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
- if(logo) objects.push('<< /Type /XObject /Subtype /Image /Width '+logo.width+' /Height '+logo.height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+logo.jpeg.length+' >>\nstream\n'+logo.jpeg+'\nendstream');
  let pdf='%PDF-1.4\n';
  const offsets=[0];
  objects.forEach((object,index)=>{ offsets[index+1]=pdf.length; pdf+=(index+1)+' 0 obj\n'+object+'\nendobj\n'; });
