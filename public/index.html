@@ -271,7 +271,7 @@ async function pdfLogo(){
  if(!source) return null;
  if(!source.complete) await new Promise((resolve,reject)=>{ source.addEventListener('load',resolve,{once:true}); source.addEventListener('error',reject,{once:true}); });
  if(!source.naturalWidth || !source.naturalHeight) return null;
- const width=360, height=Math.max(1,Math.round(width*source.naturalHeight/source.naturalWidth));
+ const width=600, height=Math.max(1,Math.round(width*source.naturalHeight/source.naturalWidth));
  const canvas=document.createElement('canvas');
  canvas.width=width; canvas.height=height;
  const context=canvas.getContext('2d');
@@ -279,17 +279,35 @@ async function pdfLogo(){
  context.fillRect(0,0,width,height);
  context.drawImage(source,0,0,width,height);
  const pixels=context.getImageData(0,0,width,height);
+ let minX=width,minY=height,maxX=-1,maxY=-1;
  for(let index=0;index<pixels.data.length;index+=4){
-   const brightness=pixels.data[index]*.299+pixels.data[index+1]*.587+pixels.data[index+2]*.114;
-   const ink=brightness>105 ? 0 : 255;
-   pixels.data[index]=ink; pixels.data[index+1]=ink; pixels.data[index+2]=ink; pixels.data[index+3]=255;
+   const red=pixels.data[index], green=pixels.data[index+1], blue=pixels.data[index+2];
+   const brightness=red*.299+green*.587+blue*.114;
+   const saturation=Math.max(red,green,blue)-Math.min(red,green,blue);
+   const isGold=brightness>70 && saturation>45 && red>green*1.12 && green>blue*1.15;
+   if(brightness<80){
+     pixels.data[index]=255; pixels.data[index+1]=255; pixels.data[index+2]=255;
+   }else if(!isGold){
+     pixels.data[index]=0; pixels.data[index+1]=0; pixels.data[index+2]=0;
+   }
+   if(isGold || pixels.data[index]<245 || pixels.data[index+1]<245 || pixels.data[index+2]<245){
+     const pixel=index/4, x=pixel%width, y=Math.floor(pixel/width);
+     minX=Math.min(minX,x); minY=Math.min(minY,y); maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
+   }
+   pixels.data[index+3]=255;
  }
- context.putImageData(pixels,0,0);
- const jpeg=atob(canvas.toDataURL('image/jpeg',.94).split(',')[1]);
- return {jpeg,width,height};
+ if(maxX<0) return null;
+ const padding=8;
+ minX=Math.max(0,minX-padding); minY=Math.max(0,minY-padding);
+ maxX=Math.min(width-1,maxX+padding); maxY=Math.min(height-1,maxY+padding);
+ const crop=document.createElement('canvas');
+ crop.width=maxX-minX+1; crop.height=maxY-minY+1;
+ crop.getContext('2d').putImageData(context.getImageData(minX,minY,crop.width,crop.height),0,0);
+ const jpeg=atob(crop.toDataURL('image/jpeg',.96).split(',')[1]);
+ return {jpeg,width:crop.width,height:crop.height};
 }
 function pdfRecordPages(records){
- const rowsPerPage=23, pages=[];
+ const rowsPerPage=16, pages=[];
  for(let i=0;i<records.length;i+=rowsPerPage) pages.push(records.slice(i,i+rowsPerPage));
  return pages;
 }
@@ -328,32 +346,32 @@ async function downloadTransactionsPdf(title,records){
      'ET'
    ];
    if(logo){
-     const logoWidth=126, logoHeight=Math.round(logoWidth*logo.height/logo.width);
-     commands.push('q '+logoWidth+' 0 0 '+logoHeight+' '+Math.round(306-logoWidth/2)+' 640 cm /Im1 Do Q');
+     const logoWidth=350, logoHeight=Math.round(logoWidth*logo.height/logo.width);
+     commands.push('q '+logoWidth+' 0 0 '+logoHeight+' '+Math.round(306-logoWidth/2)+' 530 cm /Im1 Do Q');
    }
    commands.push(
      'BT',
-     pdfCommand(46,620,11,pageTitle),
-     pdfCommand(46,595,11,'WUTNYANG BUSINESS CENTER'),
-     pdfCommand(46,578,11,title),
-     pdfCommand(46,561,10,'Generated: '+formatPdfDate()),
-     pdfCommand(46,543,11,'Income: '+formatAmount(income),'F2'),
-     pdfCommand(220,543,11,'Expenses: '+formatAmount(expenses),'F2'),
-     pdfCommand(402,543,11,'Balance: '+formatAmount(income-expenses),'F2'),
-     pdfCommand(46,510,10,'Date','F2'),
-     pdfCommand(121,510,10,'Type','F2'),
-     pdfCommand(195,510,10,'Amount','F2'),
-     pdfCommand(272,510,10,'Category','F2'),
-     pdfCommand(375,510,10,'Staff','F2'),
-     pdfCommand(485,510,10,'Description','F2'),
+     pdfCommand(46,505,11,pageTitle),
+     pdfCommand(46,480,11,'WUTNYANG BUSINESS CENTER'),
+     pdfCommand(46,463,11,title),
+     pdfCommand(46,446,10,'Generated: '+formatPdfDate()),
+     pdfCommand(46,428,11,'Income: '+formatAmount(income),'F2'),
+     pdfCommand(220,428,11,'Expenses: '+formatAmount(expenses),'F2'),
+     pdfCommand(402,428,11,'Balance: '+formatAmount(income-expenses),'F2'),
+     pdfCommand(46,391,10,'Date','F2'),
+     pdfCommand(121,391,10,'Type','F2'),
+     pdfCommand(195,391,10,'Amount','F2'),
+     pdfCommand(272,391,10,'Category','F2'),
+     pdfCommand(375,391,10,'Staff','F2'),
+     pdfCommand(485,391,10,'Description','F2'),
      'ET',
      '0.15 w',
-     '46 497 m 566 497 l S',
+     '46 378 m 566 378 l S',
      'BT'
    );
    page.forEach((t,rowIndex)=>{
      const [date,type,amount,category,staff,description]=pdfRecordRow(t);
-     const y=479-rowIndex*18;
+     const y=360-rowIndex*18;
      commands.push(
        pdfCommand(46,y,10,date),
        pdfCommand(121,y,10,type),
