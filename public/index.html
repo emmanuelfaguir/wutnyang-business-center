@@ -307,9 +307,10 @@ async function pdfLogo(){
  return {jpeg,width:crop.width,height:crop.height};
 }
 function pdfRecordPages(records){
- const rowsPerPage=16, pages=[];
- for(let i=0;i<records.length;i+=rowsPerPage) pages.push(records.slice(i,i+rowsPerPage));
- return pages;
+ const firstPageRows=16, laterPageRows=34;
+ const pages=[records.slice(0,firstPageRows)];
+ for(let index=firstPageRows;index<records.length;index+=laterPageRows) pages.push(records.slice(index,index+laterPageRows));
+ return pages.filter(page=>page.length);
 }
 function pdfRecordRow(t){
  return [
@@ -338,40 +339,47 @@ async function downloadTransactionsPdf(title,records){
  pages.forEach((page,index)=>{
    const pageNumber=3+index*2;
    const contentNumber=pageNumber+1;
-   const pageTitle=title+' - Page '+(index+1)+' of '+pageCount;
-   const commands=[
-     '0.12 0.12 0.12 rg',
-     'BT',
-     pdfCommand(pdfCenteredX('WUTNYANG BUSINESS CENTER',22),757,22,'WUTNYANG BUSINESS CENTER','F2'),
-     'ET'
-   ];
-   if(logo){
-     const logoWidth=350, logoHeight=Math.round(logoWidth*logo.height/logo.width);
-     commands.push('q '+logoWidth+' 0 0 '+logoHeight+' '+Math.round(306-logoWidth/2)+' 530 cm /Im1 Do Q');
+   const firstPage=index===0;
+   const commands=['0.12 0.12 0.12 rg','BT'];
+   if(firstPage){
+     const pageTitle=title+' - Page 1 of '+pageCount;
+     commands.push(
+       pdfCommand(pdfCenteredX('WUTNYANG BUSINESS CENTER',22),757,22,'WUTNYANG BUSINESS CENTER','F2'),
+       'ET'
+     );
+     if(logo){
+       const logoWidth=350, logoHeight=Math.round(logoWidth*logo.height/logo.width);
+       commands.push('q '+logoWidth+' 0 0 '+logoHeight+' '+Math.round(306-logoWidth/2)+' 530 cm /Im1 Do Q');
+     }
+     commands.push(
+       'BT',
+       pdfCommand(46,505,11,pageTitle),
+       pdfCommand(46,480,11,'WUTNYANG BUSINESS CENTER'),
+       pdfCommand(46,463,11,title),
+       pdfCommand(46,446,10,'Generated: '+formatPdfDate()),
+       pdfCommand(46,428,11,'Income: '+formatAmount(income),'F2'),
+       pdfCommand(220,428,11,'Expenses: '+formatAmount(expenses),'F2'),
+       pdfCommand(402,428,11,'Balance: '+formatAmount(income-expenses),'F2')
+     );
    }
+   const headingY=firstPage ? 391 : 748;
+   const lineY=firstPage ? 378 : 735;
+   const firstRowY=firstPage ? 360 : 717;
    commands.push(
-     'BT',
-     pdfCommand(46,505,11,pageTitle),
-     pdfCommand(46,480,11,'WUTNYANG BUSINESS CENTER'),
-     pdfCommand(46,463,11,title),
-     pdfCommand(46,446,10,'Generated: '+formatPdfDate()),
-     pdfCommand(46,428,11,'Income: '+formatAmount(income),'F2'),
-     pdfCommand(220,428,11,'Expenses: '+formatAmount(expenses),'F2'),
-     pdfCommand(402,428,11,'Balance: '+formatAmount(income-expenses),'F2'),
-     pdfCommand(46,391,10,'Date','F2'),
-     pdfCommand(121,391,10,'Type','F2'),
-     pdfCommand(195,391,10,'Amount','F2'),
-     pdfCommand(272,391,10,'Category','F2'),
-     pdfCommand(375,391,10,'Staff','F2'),
-     pdfCommand(485,391,10,'Description','F2'),
+     pdfCommand(46,headingY,10,'Date','F2'),
+     pdfCommand(121,headingY,10,'Type','F2'),
+     pdfCommand(195,headingY,10,'Amount','F2'),
+     pdfCommand(272,headingY,10,'Category','F2'),
+     pdfCommand(375,headingY,10,'Staff','F2'),
+     pdfCommand(485,headingY,10,'Description','F2'),
      'ET',
      '0.15 w',
-     '46 378 m 566 378 l S',
+     '46 '+lineY+' m 566 '+lineY+' l S',
      'BT'
    );
    page.forEach((t,rowIndex)=>{
      const [date,type,amount,category,staff,description]=pdfRecordRow(t);
-     const y=360-rowIndex*18;
+     const y=firstRowY-rowIndex*18;
      commands.push(
        pdfCommand(46,y,10,date),
        pdfCommand(121,y,10,type),
