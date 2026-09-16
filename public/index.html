@@ -15,8 +15,8 @@
 header{background:#0e1726;color:#fff;padding:20px 22px 22px;text-align:center;border-bottom:3px solid #d4a12f}header h1{margin:0;letter-spacing:.4px}.brand-logo{display:block;width:min(340px,76vw);height:auto;margin:8px auto 6px;border-radius:14px;box-shadow:0 8px 24px #0004}header p{margin:0;color:#e5e7eb}main{max-width:1100px;margin:20px auto;padding:0 16px}
 .panel{background:#fff;border-radius:12px;padding:20px;margin:18px 0;box-shadow:0 2px 8px #0001}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #0001}.card b{display:block;font-size:24px;margin-top:8px}
 input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-radius:8px}button:disabled{opacity:.55;cursor:not-allowed}input[readonly]{background:#f3f4f6;color:#4b5563}button{background:#111827;color:#fff;cursor:pointer}.secondary{background:#4b5563}.danger{background:#b91c1c}.small{padding:7px 9px;font-size:12px;margin:2px}.action-menu{display:inline-block;min-width:96px}.action-menu summary{list-style:none;background:#374151;color:#fff;cursor:pointer;border-radius:8px;padding:7px 9px;font-size:12px;text-align:center}.action-menu summary::-webkit-details-marker{display:none}.action-options{display:flex;gap:4px;margin-top:4px;justify-content:center}.period-year,.period-month{border:1px solid #e5e7eb;border-radius:10px;margin:10px 0;background:#fff}.period-year>summary,.period-month>summary{cursor:pointer;padding:13px 15px;font-weight:700;list-style:none}.period-year>summary::-webkit-details-marker,.period-month>summary::-webkit-details-marker{display:none}.period-year>summary::after,.period-month>summary::after{content:'⌄';float:right}.period-year[open]>summary::after,.period-month[open]>summary::after{content:'⌃'}.period-content{padding:0 12px 12px}
-.hidden{display:none}.panel-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.panel-heading h2{margin:0 0 10px}.panel-heading p{margin:0}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}.form-message{margin-top:8px;min-height:18px}
-@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}table{font-size:13px}.table-wrap{overflow-x:auto}}
+.hidden{display:none}.record-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.record-heading h2{margin:0 0 10px}.transaction-search{display:flex;align-items:center;gap:0}.transaction-search input{min-width:260px;margin:0;border-radius:8px 0 0 8px}.transaction-search .search-button{margin:0;background:#0ea5e9;border-color:#0ea5e9;border-radius:0 8px 8px 0;font-size:20px;line-height:18px;min-width:48px}.panel-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.panel-heading h2{margin:0 0 10px}.panel-heading p{margin:0}.userbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e5e7eb;font-size:12px}.notice{padding:10px;border-radius:8px;background:#fff7ed;margin-top:10px}.form-message{margin-top:8px;min-height:18px}
+@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.transaction-search{width:100%}.transaction-search input{min-width:0;width:100%}table{font-size:13px}.table-wrap{overflow-x:auto}}
 </style>
 </head>
 <body>
@@ -50,7 +50,13 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 </section>
 
 <form id="form" class="panel">
+<div class="record-heading">
 <h2>Record Transaction</h2>
+<div class="transaction-search">
+<input id="transactionSearch" type="search" placeholder="Search transactions" aria-label="Search transactions by date, type, amount, category, staff, or description">
+<button id="searchBtn" class="search-button" type="button" title="Search transactions" aria-label="Search transactions">⌕</button>
+</div>
+</div>
 <select id="type"><option>Income</option><option>Expense</option></select>
 <input id="amount" type="number" step="0.01" min="0" placeholder="Amount" required>
 <select id="category">
@@ -102,7 +108,7 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 </section>
 
 <div class="panel">
-<div class="panel-heading"><h2>This Month’s Transactions</h2><button id="downloadCurrentBtn" type="button" class="secondary">Download PDF</button></div>
+<div class="panel-heading"><h2 id="currentTransactionsHeading">This Month’s Transactions</h2><button id="downloadCurrentBtn" type="button" class="secondary">Download PDF</button></div>
 <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Category</th><th>Staff</th><th>Description</th><th id="actionsHeader" class="hidden">Actions</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
 </div>
@@ -117,7 +123,7 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 <script>
 const SUPABASE_URL = 'https://eoyaunzknoowjldilbdp.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_gNfIHTXeljHstcERpUCxxQ_hDCEfKel';
-let session = null, transactions = [], staffUsers = [], currentRole = '', profileName = '', editingId = null, staffManagementOpen = false;
+let session = null, transactions = [], staffUsers = [], currentRole = '', profileName = '', editingId = null, staffManagementOpen = false, transactionSearch = '';
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const formatAmount = value => Number(value || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -160,6 +166,19 @@ function renderPreviousTransactions(){
    return `<details class="period-year"><summary>${escapeHtml(year)}</summary><div class="period-content"><button class="secondary small" type="button" data-download-scope="year" data-period="${escapeHtml(year)}">Download ${escapeHtml(year)} PDF</button>${monthHtml}</div></details>`;
  }).join('');
 }
+function transactionMatchesSearch(transaction, searchText){
+ const query=searchText.toLowerCase();
+ const searchable=[
+   transaction.date,
+   transaction.type,
+   transaction.amount,
+   formatAmount(transaction.amount),
+   transaction.category,
+   transaction.staff,
+   transaction.description
+ ].join(' ').toLowerCase();
+ return searchable.includes(query);
+}
 function render(){
  const current=transactions.filter(t=>String(t.date||'').slice(0,7)===currentMonthKey());
  let inc=0, exp=0;
@@ -167,10 +186,21 @@ function render(){
  $('income').textContent=formatAmount(inc); $('expense').textContent=formatAmount(exp);
  $('balance').textContent=formatAmount(inc-exp); $('count').textContent=current.length;
  $('actionsHeader').classList.toggle('hidden', !isAdmin());
- $('rows').innerHTML=current.map(transactionRow).join('');
+ const hasSearch=Boolean(transactionSearch);
+ const displayed=hasSearch ? transactions.filter(transaction=>transactionMatchesSearch(transaction,transactionSearch)) : current;
+ $('currentTransactionsHeading').textContent=hasSearch ? 'Search Results' : 'This Month’s Transactions';
+ $('rows').innerHTML=displayed.length ? displayed.map(transactionRow).join('') : '<tr><td colspan="'+(isAdmin()?7:6)+'">No transactions found.</td></tr>';
  $('downloadCurrentBtn').disabled=!current.length;
- renderPreviousTransactions();
+ const previousPanel=$('previousPanel');
+ if(hasSearch){ previousPanel.classList.add('hidden'); }
+ else renderPreviousTransactions();
 }
+
+function applyTransactionSearch(){
+ transactionSearch=$('transactionSearch').value.trim();
+ render();
+}
+
 
 async function supa(path, options={}){
  const headers=Object.assign({apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},options.headers||{});
@@ -214,14 +244,16 @@ async function loadStaffUsers(){
 
 async function startSession(nextSession){
  session=nextSession;
- localStorage.setItem('wbc_session', JSON.stringify(session));
+ localStorage.removeItem('wbc_session');
+ sessionStorage.setItem('wbc_session', JSON.stringify(session));
  $('loginPanel').classList.add('hidden'); $('app').classList.remove('hidden');
  $('userEmail').textContent=session.user.email||'';
  await loadProfile(); await loadTransactions(); setMessage('loginMsg','');
 }
 
 async function restoreSession(){
- const saved=localStorage.getItem('wbc_session');
+ localStorage.removeItem('wbc_session');
+ const saved=sessionStorage.getItem('wbc_session');
  if(!saved) return;
  try{
    const previous=JSON.parse(saved);
@@ -232,7 +264,7 @@ async function restoreSession(){
    });
    await startSession(refreshed);
  }catch(_){
-   localStorage.removeItem('wbc_session');
+   sessionStorage.removeItem('wbc_session');
  }
 }
 
@@ -244,8 +276,10 @@ async function login(){
  }catch(e){setMessage('loginMsg',e.message)}
 }
 $('loginBtn').onclick=login;
+$('searchBtn').onclick=applyTransactionSearch;
+$('transactionSearch').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyTransactionSearch();}});
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter') login()});
-$('logoutBtn').onclick=()=>{localStorage.removeItem('wbc_session');session=null;transactions=[];currentRole='';profileName='';editingId=null;staffManagementOpen=false;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';setMessage('loginMsg','');};
+$('logoutBtn').onclick=()=>{localStorage.removeItem('wbc_session');sessionStorage.removeItem('wbc_session');session=null;transactions=[];currentRole='';profileName='';editingId=null;staffManagementOpen=false;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';setMessage('loginMsg','');};
 
 function pdfText(value){ return String(value ?? '').replace(/[\\()]/g, char=>'\\'+char).replace(/[^\x20-\x7E]/g,' '); }
 function fitPdf(value,length){
