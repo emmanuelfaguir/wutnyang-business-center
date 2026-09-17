@@ -172,6 +172,46 @@ app.get('/api/staff', async (req, res) => {
   }
 });
 
+// Promotes an existing staff account to Manager. This is deliberately
+// limited to staff-to-manager so Admin accounts cannot be created or changed here.
+app.patch('/api/staff/:id/role', async (req, res) => {
+  try {
+    await requireAdmin(req);
+    const staffId = String(req.params.id || '');
+    const role = String(req.body.role || '').toLowerCase();
+    if (role !== 'manager') {
+      return res.status(400).json({ error: 'Only promotion to Manager is available here.' });
+    }
+
+    const profileResponse = await fetch(
+      `${SUPABASE_REST_URL}/profiles?select=id,role,full_name&id=eq.${encodeURIComponent(staffId)}`,
+      { headers: serviceHeaders() }
+    );
+    const profiles = await readJson(profileResponse);
+    const target = profiles[0];
+
+    if (!target || target.role !== 'staff') {
+      return res.status(404).json({ error: 'Only a Staff account can be promoted here.' });
+    }
+
+    const updateResponse = await fetch(
+      `${SUPABASE_REST_URL}/profiles?id=eq.${encodeURIComponent(staffId)}`,
+      {
+        method: 'PATCH',
+        headers: { ...serviceHeaders(), Prefer: 'return=representation' },
+        body: JSON.stringify({ role: 'manager' })
+      }
+    );
+    const updated = await readJson(updateResponse);
+    res.json({
+      message: 'Staff account promoted to Manager.',
+      staff: { id: staffId, full_name: updated[0]?.full_name || target.full_name, role: 'manager' }
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || 'Could not promote staff user.' });
+  }
+});
+
 // Permanently removes a staff Auth account and its profile. The target is
 // checked server-side so an Admin cannot accidentally delete an Admin/Manager.
 app.delete('/api/staff/:id', async (req, res) => {
