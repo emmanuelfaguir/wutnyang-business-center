@@ -44,6 +44,17 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 <button id="logoutBtn">Logout</button>
 </div>
 
+<section class="panel">
+<h2>Account Settings</h2>
+<p>Change your own password whenever you need to. Use at least 8 characters.</p>
+<form id="accountPasswordForm">
+<input id="newAccountPassword" type="password" placeholder="New password" autocomplete="new-password" required>
+<input id="confirmAccountPassword" type="password" placeholder="Confirm new password" autocomplete="new-password" required>
+<button type="submit" class="secondary">Change Password</button>
+</form>
+<div id="accountPasswordMsg" class="form-message"></div>
+</section>
+
 <section class="cards">
 <div class="card">This Month’s Income<b id="income">0.00</b></div>
 <div class="card">This Month’s Expenses<b id="expense">0.00</b></div>
@@ -103,9 +114,9 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 
 <section id="staffListPanel" class="panel hidden">
 <h2>Manage Staff</h2>
-<p>Only an Admin can remove a staff login. Removing a staff account is permanent and immediately removes its access.</p>
+<p>Only an Admin can promote a Staff member to Manager or permanently delete a Staff login. Promoted Managers can access manager features immediately.</p>
 <div id="staffListMsg" class="form-message"></div>
-<div class="table-wrap"><table><thead><tr><th>Staff member</th><th>Action</th></tr></thead>
+<div class="table-wrap"><table><thead><tr><th>Staff member</th><th>Actions</th></tr></thead>
 <tbody id="staffRows"></tbody></table></div>
 </section>
 
@@ -229,7 +240,7 @@ async function loadTransactions(){ transactions=await supa('/rest/v1/transaction
 
 function renderStaffUsers(){
   $('staffRows').innerHTML = staffUsers.length
-    ? staffUsers.map(member => `<tr><td>${escapeHtml(member.full_name || 'Unnamed staff member')}</td><td><button class="small danger" data-staff-action="delete" data-id="${escapeHtml(member.id)}" data-name="${escapeHtml(member.full_name || 'this staff member')}">Delete Staff</button></td></tr>`).join('')
+    ? staffUsers.map(member => `<tr><td>${escapeHtml(member.full_name || 'Unnamed staff member')}</td><td><button class="small secondary" data-staff-action="promote" data-id="${escapeHtml(member.id)}" data-name="${escapeHtml(member.full_name || 'this staff member')}">Make Manager</button><button class="small danger" data-staff-action="delete" data-id="${escapeHtml(member.id)}" data-name="${escapeHtml(member.full_name || 'this staff member')}">Delete Staff</button></td></tr>`).join('')
     : '<tr><td colspan="2">No staff accounts found.</td></tr>';
 }
 async function loadStaffUsers(){
@@ -284,6 +295,21 @@ $('searchBtn').onclick=applyTransactionSearch;
 $('transactionSearch').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyTransactionSearch();}});
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter') login()});
 $('logoutBtn').onclick=()=>{localStorage.removeItem('wbc_session');sessionStorage.removeItem('wbc_session');session=null;transactions=[];currentRole='';profileName='';editingId=null;staffManagementOpen=false;$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('password').value='';setMessage('loginMsg','');};
+
+$('accountPasswordForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const password=$('newAccountPassword').value;
+ const confirmPassword=$('confirmAccountPassword').value;
+ if(password.length<8){ setMessage('accountPasswordMsg','Use a password with at least 8 characters.'); return; }
+ if(password!==confirmPassword){ setMessage('accountPasswordMsg','The two new passwords do not match.'); return; }
+ try{
+   setMessage('accountPasswordMsg','Changing password…',true);
+   await supa('/auth/v1/user',{method:'PUT',body:JSON.stringify({password})});
+   event.target.reset();
+   setMessage('accountPasswordMsg','Password changed successfully. Use it the next time you sign in.',true);
+ }catch(error){ setMessage('accountPasswordMsg',error.message||'Could not change password.'); }
+});
+
 
 function pdfText(value){ return String(value ?? '').replace(/[\\()]/g, char=>'\\'+char).replace(/[^\x20-\x7E]/g,' '); }
 function fitPdf(value,length){
@@ -455,9 +481,23 @@ $('staffPanel').addEventListener('submit',async e=>{
  }catch(error){setMessage('staffMsg',error.message)}
 });
 $('staffRows').addEventListener('click',async e=>{
- const button=e.target.closest('button[data-staff-action="delete"]');
+ const button=e.target.closest('button[data-staff-action]');
  if(!button || !isAdmin()) return;
  const name=button.dataset.name || 'this staff member';
+ const action=button.dataset.staffAction;
+ if(action==='promote'){
+   if(!confirm(`Make ${name} a Manager? They will be able to view all records and add transactions.`)) return;
+   try{
+     setMessage('staffListMsg','Promoting staff member…',true);
+     const response=await fetch('/api/staff/'+encodeURIComponent(button.dataset.id)+'/role',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({role:'manager'})});
+     const data=await response.json();
+     if(!response.ok) throw new Error(data.error||'Could not promote staff user.');
+     setMessage('staffListMsg',`${name} is now a Manager.`,true);
+     await loadStaffUsers();
+   }catch(error){ setMessage('staffListMsg',error.message); }
+   return;
+ }
+ if(action!=='delete') return;
  if(!confirm(`Delete the staff login for ${name}? They will immediately lose access. This cannot be undone.`)) return;
  try{
    setMessage('staffListMsg','Deleting staff login…',true);
