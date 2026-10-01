@@ -43,12 +43,12 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 </div>
 </div>
 <div id="loginMsg" class="login-extra"></div>
-<button id="forgotPasswordBtn" type="button" class="forgot-password-button hidden">Forgot Password?</button>
+<button id="forgotPasswordBtn" type="button" class="forgot-password-button">Forgot Password?</button>
 <form id="forgotPasswordForm" class="forgot-password-form hidden">
 <input id="resetEmail" type="email" placeholder="Your email address" autocomplete="email" required>
 <button type="submit" class="secondary">Send Reset Link</button>
 </form>
-<div id="forgotPasswordMsg" class="form-message"></div>
+<div id="forgotPasswordMsg" class="form-message" role="status" aria-live="polite"></div>
 </section>
 
 <section id="advertisementPanel" class="panel advertisement">
@@ -176,7 +176,7 @@ input,select,button{padding:11px;margin:5px 4px;border:1px solid #d1d5db;border-
 <input id="recoveryConfirmPassword" type="password" placeholder="Confirm new password" autocomplete="new-password" required>
 <button type="submit" class="secondary">Save New Password</button>
 </form>
-<div id="passwordRecoveryMsg" class="form-message"></div>
+<div id="passwordRecoveryMsg" class="form-message" role="status" aria-live="polite"></div>
 </div>
 </dialog>
 
@@ -332,7 +332,7 @@ async function restoreSession(){
 
 async function login(){
  try{
-   $('forgotPasswordBtn').classList.add('hidden'); $('forgotPasswordForm').classList.add('hidden'); setMessage('forgotPasswordMsg','');
+   $('forgotPasswordBtn').classList.remove('hidden'); $('forgotPasswordForm').classList.add('hidden'); setMessage('forgotPasswordMsg','');
    setMessage('loginMsg','Signing in…',true);
    const signedIn=await supa('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})});
    await startSession(signedIn);
@@ -361,12 +361,20 @@ $('forgotPasswordForm').addEventListener('submit',async event=>{
 function openPasswordRecovery(){
  const params=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):location.hash);
  const token=params.get('access_token');
- if(params.get('type')!=='recovery'||!token) return;
+ const requested=new URLSearchParams(location.search).has('reset-password');
+ if(params.has('error') || (requested && (params.get('type')!=='recovery'||!token))){
+   history.replaceState({},document.title,location.pathname);
+   $('forgotPasswordForm').classList.remove('hidden');
+   setMessage('forgotPasswordMsg','This reset link has expired or is invalid. Enter your email address to request a new link.');
+   return true;
+ }
+ if(params.get('type')!=='recovery'||!token) return false;
  recoveryAccessToken=token;
  sessionStorage.removeItem('wbc_session');
  const dialog=$('passwordRecoveryDialog');
  if(typeof dialog.showModal==='function') dialog.showModal(); else dialog.setAttribute('open','');
  history.replaceState({},document.title,location.pathname+'?reset-password=1');
+ return true;
 }
 $('passwordRecoveryForm').addEventListener('submit',async event=>{
  event.preventDefault();
@@ -382,6 +390,7 @@ $('passwordRecoveryForm').addEventListener('submit',async event=>{
    if(!response.ok) throw new Error(data.message||data.error_description||data.error||'Could not change password.');
    recoveryAccessToken=''; event.target.reset(); sessionStorage.removeItem('wbc_session');
    setMessage('passwordRecoveryMsg','Password changed. You can now sign in with your new password.',true);
+   setMessage('loginMsg','Password changed. Sign in with your new password.',true);
    setTimeout(()=>{const dialog=$('passwordRecoveryDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');history.replaceState({},document.title,location.pathname);},1500);
  }catch(error){setMessage('passwordRecoveryMsg',error.message);}
 });
@@ -615,8 +624,7 @@ $('staffRows').addEventListener('click',async e=>{
    setMessage('staffListMsg',error.message);
  }
 });
-openPasswordRecovery();
-restoreSession();
+if(!openPasswordRecovery()) restoreSession();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
